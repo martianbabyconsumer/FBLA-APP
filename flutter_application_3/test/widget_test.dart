@@ -11,20 +11,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_3/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('Home screen displays app label and sample post', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const FBLAApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify the centered top label is present
+    expect(find.text('[FBLA APP]'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify the sample post title from the demo data is present
+    expect(find.text('My dog is pregnant'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify the bottom navigation home icon exists
+    expect(find.byIcon(Icons.home), findsOneWidget);
   });
 }
