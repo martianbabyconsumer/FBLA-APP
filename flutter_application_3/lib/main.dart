@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-import 'package:flutter/material.dart'; 
-=======
-import 'package:flutter/material.dart';
 
->>>>>>> 59aa2818561d439d0664e32b6effca017b2d60cf
+import 'package:flutter/material.dart'; 
+
 void main() {
   runApp(const FBLAApp());
 }
