@@ -1,17 +1,457 @@
 import 'package:flutter/material.dart';
+import '../models/chapter_message.dart';
+import 'package:intl/intl.dart';
 
-class ChapterPage extends StatelessWidget {
+class ChapterPage extends StatefulWidget {
   const ChapterPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chapter'),
+  State<ChapterPage> createState() => _ChapterPageState();
+}
+
+class _ChapterPageState extends State<ChapterPage> {
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  late List<Channel> _channels;
+  late Channel _selectedChannel;
+  List<ChapterMessage> _messages = [];
+  bool _showEmojiPicker = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeChannels();
+    _loadMessages();
+  }
+
+  void _initializeChannels() {
+    _channels = [
+      Channel(
+        id: 'announcements',
+        name: 'announcements',
+        icon: Icons.campaign,
+        isAnnouncement: true,
+        description: 'Important chapter announcements',
+        isLocked: true,
       ),
-      body: const Center(
-        child: Text('Chapter Page'),
+      Channel(
+        id: 'general',
+        name: 'general',
+        icon: Icons.chat,
+        description: 'General chapter discussion',
+      ),
+      Channel(
+        id: 'events',
+        name: 'events',
+        icon: Icons.event,
+        description: 'Upcoming events and activities',
+      ),
+      Channel(
+        id: 'chapter-calendar',
+        name: 'chapter-calendar',
+        icon: Icons.calendar_month,
+        description: 'Shared chapter calendar',
+      ),
+      Channel(
+        id: 'competitions',
+        name: 'competitions',
+        icon: Icons.emoji_events,
+        description: 'Competition preparation and discussions',
+      ),
+      Channel(
+        id: 'resources',
+        name: 'resources',
+        icon: Icons.book,
+        description: 'Study materials and resources',
+      ),
+    ];
+    _selectedChannel = _channels[1]; // Start with general channel
+  }
+
+  void _loadMessages() {
+    // In a real app, this would load messages from a backend
+    final now = DateTime.now();
+    _messages = [
+      ChapterMessage(
+        id: '1',
+        authorId: 'advisor',
+        authorName: 'Chapter Advisor',
+        content: '🎉 Welcome to our FBLA Chapter! This is our new communication platform. Please read the rules and guidelines pinned in the announcements channel.',
+        timestamp: now.subtract(const Duration(days: 1)),
+        type: MessageType.announcement,
+        isPinned: true,
+      ),
+      ChapterMessage(
+        id: '2',
+        authorId: 'president',
+        authorName: 'Chapter President',
+        content: 'Our next meeting will be on Friday at 3:30 PM in Room 201. We\'ll be discussing upcoming competition preparations!',
+        timestamp: now.subtract(const Duration(hours: 2)),
+        type: MessageType.eventNotification,
+      ),
+    ];
+  }
+
+  void _sendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _messages.add(
+        ChapterMessage(
+          id: DateTime.now().toString(),
+          authorId: 'currentUser',
+          authorName: 'You',
+          content: text,
+          timestamp: DateTime.now(),
+        ),
+      );
+    });
+
+    _messageController.clear();
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _toggleReaction(ChapterMessage message, String emoji) {
+    setState(() {
+      var reaction = message.reactions.firstWhere(
+        (r) => r.emoji == emoji,
+        orElse: () {
+          final newReaction = ReactionCount(emoji: emoji, userIds: ['currentUser']);
+          message.reactions.add(newReaction);
+          return newReaction;
+        },
+      );
+
+      if (reaction.userIds.contains('currentUser')) {
+        reaction.userIds.remove('currentUser');
+        if (reaction.userIds.isEmpty) {
+          message.reactions.remove(reaction);
+        }
+      } else {
+        reaction.userIds.add('currentUser');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      body: Row(
+        children: [
+          // Channel sidebar
+          Container(
+            width: 240,
+            color: isDark ? Colors.grey[900] : Colors.grey[100],
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: theme.primaryColor,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.school, color: Colors.white),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'FBLA Chapter',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    children: _channels.map((channel) {
+                      final isSelected = channel == _selectedChannel;
+                      return ListTile(
+                        leading: Icon(
+                          channel.icon,
+                          color: isSelected
+                              ? theme.primaryColor
+                              : isDark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[700],
+                        ),
+                        title: Text(
+                          '#${channel.name}',
+                          style: TextStyle(
+                            color: isSelected
+                                ? theme.primaryColor
+                                : isDark
+                                    ? Colors.grey[300]
+                                    : Colors.grey[800],
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        selected: isSelected,
+                        onTap: () {
+                          setState(() {
+                            _selectedChannel = channel;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Messages area
+          Expanded(
+            child: Column(
+              children: [
+                // Channel header
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _selectedChannel.icon,
+                        color: theme.primaryColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '#${_selectedChannel.name}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        _selectedChannel.description,
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Messages list
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      final showHeader = index == 0 ||
+                          message.authorId != _messages[index - 1].authorId;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (showHeader) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: theme.primaryColor,
+                                  child: Text(
+                                    message.authorName[0],
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  message.authorName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  DateFormat.yMMMd()
+                                      .add_jm()
+                                      .format(message.timestamp),
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                if (message.isPinned) ...[
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.push_pin,
+                                    size: 16,
+                                    color: theme.primaryColor,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: 48,
+                              top: showHeader ? 8 : 4,
+                              right: 16,
+                              bottom: 4,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(message.content),
+                                if (message.reactions.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: message.reactions.map((reaction) {
+                                      final isReacted = reaction.userIds
+                                          .contains('currentUser');
+                                      return InkWell(
+                                        onTap: () => _toggleReaction(
+                                            message, reaction.emoji),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isReacted
+                                                ? theme.primaryColor
+                                                    .withOpacity(0.1)
+                                                : isDark
+                                                    ? Colors.grey[800]
+                                                    : Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: isReacted
+                                                ? Border.all(
+                                                    color: theme.primaryColor,
+                                                  )
+                                                : null,
+                                          ),
+                                          child: Text(
+                                            '${reaction.emoji} ${reaction.count}',
+                                            style: TextStyle(
+                                              color: isReacted
+                                                  ? theme.primaryColor
+                                                  : null,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                // Message input
+                if (!_selectedChannel.isLocked)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            // TODO: Implement file attachment
+                          },
+                          tooltip: 'Add attachment',
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Message #${_selectedChannel.name}',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? Colors.grey[800]
+                                  : Colors.grey[200],
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                            minLines: 1,
+                            maxLines: 5,
+                            onSubmitted: (_) => _sendMessage(),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.emoji_emotions_outlined),
+                          onPressed: () {
+                            setState(() {
+                              _showEmojiPicker = !_showEmojiPicker;
+                            });
+                          },
+                          tooltip: 'Add emoji',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: _sendMessage,
+                          tooltip: 'Send message',
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 }

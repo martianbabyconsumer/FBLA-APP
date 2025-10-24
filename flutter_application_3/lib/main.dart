@@ -1,26 +1,18 @@
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/theme_provider.dart';
+import 'repository/post_repository.dart';
+import 'widgets/app_scaffold.dart';
 import 'pages/settings_page.dart';
 import 'pages/chapter_page.dart';
 import 'pages/calendar_page.dart';
 import 'pages/favorites_page.dart';
 
-import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'providers/theme_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'providers/auth_service.dart';
-import 'pages/login_page.dart';
-import 'pages/signup_page.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
-
-  // Create and initialize the ThemeProvider
+  // Create and initialize providers
   final themeProvider = ThemeProvider();
   await themeProvider.initialize();
 
@@ -28,13 +20,11 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: themeProvider),
-        Provider<AuthService>(create: (_) => AuthService()),
-        StreamProvider<User?>(
-          create: (context) => context.read<AuthService>().authStateChanges,
-          initialData: null,
+        ChangeNotifierProvider<PostRepository>(
+          create: (_) => InMemoryPostRepository(),
         ),
       ],
-      child: FBLAApp(),
+      child: const FBLAApp(),
     ),
   );
 }
@@ -44,172 +34,15 @@ class FBLAApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        final firebaseUser = context.watch<User?>();
-
-        return MaterialApp(
-          title: 'FBLA APP',
-          theme: themeProvider.currentTheme,
-          home: firebaseUser == null ? LoginPage() : const HomeScreen(),
-          routes: {
-            '/signup': (_) => const SignupPage(),
-          },
-        );
-      },
+    return MaterialApp(
+      title: 'FBLA CONNECT',
+      theme: context.watch<ThemeProvider>().currentTheme,
+      home: const AppScaffold(),
     );
   }
 }
 
-// Minimal Post model matching the screenshot fields.
-class Post {
-  Post({
-    required this.id,
-    required this.handle,
-    required this.displayName,
-    required this.dateLabel,
-    required this.title,
-    required this.body,
-    this.imageUrl,
-    int? likes,
-    bool? liked,
-    List<Comment>? comments,
-  })  : likes = likes ?? 0,
-        liked = liked ?? false,
-        comments = comments ?? <Comment>[];
 
-  final String id;
-  final String handle; // e.g. @skibidiwinner189
-  final String displayName; // e.g. John Adams
-  final String dateLabel; // e.g. Sep 11
-  final String title; // bold title
-  final String body; // multiline body text
-  final String? imageUrl; // optional image
-
-  int likes;
-  bool liked;
-  List<Comment> comments;
-
-  Post copy() => Post(
-        id: id,
-        handle: handle,
-        displayName: displayName,
-        dateLabel: dateLabel,
-        title: title,
-        body: body,
-        imageUrl: imageUrl,
-        likes: likes,
-        liked: liked,
-        comments: List<Comment>.from(comments),
-      );
-}
-
-class Comment {
-  Comment({
-    required this.authorHandle,
-    required this.authorName,
-    required this.text,
-    required this.dateLabel,
-  });
-
-  final String authorHandle; // e.g. @skibidiwinner189
-  final String authorName; // e.g. John Adams
-  final String text;
-  final String dateLabel; // e.g. 'Oct 20'
-}
-
-// Repository abstraction so the data layer can be swapped out for a real
-// backend later. Implementations should call notifyListeners() when data
-// changes so UI can update.
-abstract class PostRepository extends ChangeNotifier {
-  List<Post> getPosts();
-  Post? getPostById(String id);
-  void updatePost(Post updated);
-  void toggleLike(String postId);
-  void addComment(String postId, Comment comment);
-}
-
-// Simple in-memory repository useful for local testing and for wiring up a
-// network-backed implementation later.
-class InMemoryPostRepository extends PostRepository {
-  final List<Post> _posts;
-
-  InMemoryPostRepository()
-      : _posts = [
-          Post(
-            id: '1',
-            handle: '@skibidiwinner189',
-            displayName: 'John Adams',
-            dateLabel: 'Sep 11',
-            title: 'My dog is pregnant',
-            body:
-                'I found out today that my dog is pregnant. We\'re excited and a little nervous. Any tips for first-time dog parents? Here\'s a photo from the vet appointment.',
-            imageUrl:
-                'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=60',
-            likes: 12,
-            comments: [
-              Comment(authorHandle: '@fan1', authorName: 'A Fan', text: 'Congrats!', dateLabel: 'Sep 11'),
-              Comment(authorHandle: '@friend2', authorName: 'Friend Two', text: 'So happy for you', dateLabel: 'Sep 11'),
-            ],
-          ),
-          Post(
-            id: '2',
-            handle: '@skibidiwinner167',
-            displayName: 'Samuel Adams',
-            dateLabel: 'Jul 11',
-            title: 'Big news',
-            body:
-                'Working on a new project that I think will help students prepare for competitions. More details soon!',
-            imageUrl: null,
-            likes: 2,
-            comments: [],
-          ),
-        ];
-
-  @override
-  List<Post> getPosts() => List<Post>.unmodifiable(_posts.map((p) => p.copy()));
-
-  @override
-  Post? getPostById(String id) {
-    try {
-      return _posts.firstWhere((p) => p.id == id).copy();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  void updatePost(Post updated) {
-    final idx = _posts.indexWhere((p) => p.id == updated.id);
-    if (idx != -1) {
-      _posts[idx] = updated.copy();
-      notifyListeners();
-    }
-  }
-
-  @override
-  void toggleLike(String postId) {
-    final idx = _posts.indexWhere((p) => p.id == postId);
-    if (idx == -1) return;
-    final p = _posts[idx];
-    if (p.liked) {
-      p.liked = false;
-      p.likes = (p.likes - 1).clamp(0, 999999);
-    } else {
-      p.liked = true;
-      p.likes++;
-    }
-    notifyListeners();
-  }
-
-  @override
-  void addComment(String postId, Comment comment) {
-    final idx = _posts.indexWhere((p) => p.id == postId);
-    if (idx == -1) return;
-    _posts[idx].comments.add(comment);
-    notifyListeners();
-  }
-}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -218,44 +51,134 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  late final PostRepository repository;
-  late List<Post> posts;
-  int _selectedIndex = 2; // Default to home tab
+
+
+class CreatePostScreen extends StatefulWidget {
+  const CreatePostScreen({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    repository = InMemoryPostRepository();
-    posts = repository.getPosts();
-    repository.addListener(() {
-      setState(() {
-        posts = repository.getPosts();
-      });
-    });
+  State<CreatePostScreen> createState() => _CreatePostScreenState();
+}
+
+class _CreatePostScreenState extends State<CreatePostScreen> {
+  final _titleController = TextEditingController();
+  final _bodyController = TextEditingController();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
   }
 
-  // Toggle like on post index
-  void _toggleLike(int index) {
-    repository.toggleLike(posts[index].id);
-  }
-
-  // Open post detail to view/add comments
-  Future<void> _openComments(int index) async {
-    final postId = posts[index].id;
-    final post = repository.getPostById(postId);
-    if (post == null) return;
-    final updated = await Navigator.of(context).push<Post>(
-      MaterialPageRoute(builder: (_) => PostDetailPage(post: post)),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Create Post'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (!mounted) return;
+              if (_titleController.text.trim().isEmpty || 
+                  _bodyController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill in all fields'))
+                );
+                return;
+              }
+              final newPost = Post(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                handle: '@you',
+                displayName: 'You',
+                dateLabel: '${DateTime.now().month}/${DateTime.now().day}',
+                title: _titleController.text.trim(),
+                body: _bodyController.text.trim(),
+                comments: [],
+              );
+              if (mounted) {
+                Navigator.of(context).pop(newPost);
+              }
+            },
+            child: const Text('Post', style: TextStyle(fontSize: 16)),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                hintText: 'Title',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 1,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: TextField(
+                controller: _bodyController,
+                decoration: const InputDecoration(
+                  hintText: 'What do you want to share?',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: null,
+                expands: true,
+                textAlignVertical: TextAlignVertical.top,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-    if (updated != null) {
-      repository.updatePost(updated);
+  }
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 2; // Default to home tab
+
+  Future<void> _createNewPost() async {
+    if (!mounted) return;
+    final newPost = await Navigator.of(context).push<Post>(
+      MaterialPageRoute(builder: (_) => CreatePostScreen()),
+    );
+    if (!mounted) return;
+    if (newPost != null) {
+      // use provided repository
+      context.read<PostRepository>().addPost(newPost);
     }
   }
 
-  void _onMenuSelected(String value, int index) {
+  // Toggle like on post id
+  void _toggleLike(String postId) {
+    context.read<PostRepository>().toggleLike(postId);
+  }
+
+  // Open post detail to view/add comments
+  Future<void> _openComments(String postId) async {
+    if (!mounted) return;
+    final post = context.read<PostRepository>().getPostById(postId);
+    if (post == null) return;
+    if (!mounted) return;
+    final updated = await Navigator.of(context).push<Post>(
+      MaterialPageRoute(
+        builder: (context) => Consumer<PostRepository>(
+          builder: (context, repo, _) => PostDetailPage(post: post),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (updated != null) {
+      context.read<PostRepository>().updatePost(updated);
+    }
+  }
+
+  void _onMenuSelected(String value, String postId) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$value on post ${posts[index].id}')),
+      SnackBar(content: Text('$value on post $postId')),
     );
   }
 
@@ -272,19 +195,24 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return const ChapterPage();
       case 2:
-        return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 80, top: 8),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            final p = posts[index];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: PostCard(
-                post: p,
-                onLike: () => _toggleLike(index),
-                onComments: () => _openComments(index),
-                onMenuSelected: (value) => _onMenuSelected(value, index),
-              ),
+        return Consumer<PostRepository>(
+          builder: (context, repo, child) {
+            final posts = repo.getPosts();
+            return ListView.builder(
+              padding: const EdgeInsets.only(bottom: 80, top: 8),
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                final p = posts[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: PostCard(
+                    post: p,
+                    onLike: () => _toggleLike(p.id),
+                    onComments: () => _openComments(p.id),
+                    onMenuSelected: (value) => _onMenuSelected(value, p.id),
+                  ),
+                );
+              },
             );
           },
         );
@@ -299,19 +227,78 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          '[FBLA APP]',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'FBLA',
+              style: TextStyle(
+                color: Colors.blue,
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'CONNECT',
+              style: TextStyle(
+                color: Color(0xFFFFD700), // gold
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ],
         ),
+        bottom: _selectedIndex == 2 ? PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                  width: 1,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: InkWell(
+              onTap: _createNewPost,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[800] : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.add, size: 20, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'New Post',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[300] : Colors.grey[700],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ) : null,
       ),
       body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
@@ -363,13 +350,16 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark ? Colors.black.withAlpha(102) : Colors.black.withAlpha(13),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -388,7 +378,7 @@ class PostCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: isDark ? Colors.grey[800] : Colors.grey[300],
                    shape: BoxShape.circle,
                  ),
                ),
@@ -406,14 +396,14 @@ class PostCard extends StatelessWidget {
                          const SizedBox(width: 8),
                          Text(
                            post.dateLabel,
-                           style: TextStyle(color: Colors.grey[600]),
+                           style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
                          ),
                        ],
                      ),
                      const SizedBox(height: 2),
                      Text(
                        post.handle,
-                       style: TextStyle(color: Colors.grey[700]),
+                       style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
                      ),
                    ],
                  ),
@@ -443,7 +433,7 @@ class PostCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             // Optional image with red circle overlay
-            if (post.imageUrl != null) ...[
+              if (post.imageUrl != null) ...[
               SizedBox(
                 height: 200,
                 width: double.infinity,
@@ -457,7 +447,7 @@ class PostCard extends StatelessWidget {
                         width: double.infinity,
                         height: double.infinity,
                         errorBuilder: (c, e, s) => Container(
-                          color: Colors.grey[200],
+                          color: isDark ? Colors.grey[800] : Colors.grey[200],
                           child: const Center(child: Icon(Icons.broken_image)),
                         ),
                       ),
@@ -527,6 +517,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   late Post _post;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  Comment? _replyingTo; // Track which comment we're replying to
 
   @override
   void initState() {
@@ -541,15 +532,32 @@ class _PostDetailPageState extends State<PostDetailPage> {
     super.dispose();
   }
 
-  void _addComment() {
+  void _addComment({Comment? parentComment}) {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    
+    final now = DateTime.now();
+    final dateLabel = '${now.month}/${now.day}';
+    // In this demo the commenter is always 'You'. Replace with auth in real app.
+    final newComment = Comment(
+      authorHandle: '@you',
+      authorName: 'You',
+      text: text,
+      dateLabel: dateLabel,
+      replies: []
+    );
+
     setState(() {
-      final now = DateTime.now();
-      final dateLabel = '${now.month}/${now.day}';
-      // In this demo the commenter is always 'You'. Replace with auth in real app.
-      _post.comments.add(Comment(authorHandle: '@you', authorName: 'You', text: text, dateLabel: dateLabel));
+      if (parentComment != null) {
+        // Add reply to the parent comment
+        parentComment.replies.add(newComment);
+      } else {
+        // Add top-level comment
+        _post.comments.add(newComment);
+      }
+      _replyingTo = null; // Clear reply state
     });
+
     _controller.clear();
     // Scroll to the bottom to show the new comment.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -563,13 +571,42 @@ class _PostDetailPageState extends State<PostDetailPage> {
     });
   }
 
+  void _startReply(Comment comment) {
+    setState(() {
+      _replyingTo = comment;
+    });
+    _controller.clear();
+    FocusScope.of(context).requestFocus(FocusNode());
+    // Optionally scroll to the input field
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _cancelReply() {
+    setState(() {
+      _replyingTo = null;
+    });
+    _controller.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // Return the modified post when the user navigates back.
-        Navigator.of(context).pop(_post);
-        return false; // we already popped
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (!didPop && mounted) {
+          Navigator.of(context).pop(_post);
+        }
       },
       child: Scaffold(
       appBar: AppBar(
@@ -589,21 +626,82 @@ class _PostDetailPageState extends State<PostDetailPage> {
           children: [
             Row(
               children: [
-                Container(width: 48, height: 48, decoration: BoxDecoration(color: Colors.grey[300], shape: BoxShape.circle)),
+                Container(width: 48, height: 48, decoration: BoxDecoration(color: isDark ? Colors.grey[800] : Colors.grey[300], shape: BoxShape.circle)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_post.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(_post.title),
+                      Row(
+                        children: [
+                          Text(_post.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          Text(_post.handle, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 14)),
+                          const SizedBox(width: 8),
+                          Text(_post.dateLabel, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 14)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _post.title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _post.body,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            if (_post.imageUrl != null) ...[
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  _post.imageUrl!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (c, e, s) => Container(
+                    height: 200,
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    child: const Center(child: Icon(Icons.broken_image)),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    // Use repository as single source of truth for likes
+                    final repo = context.read<PostRepository>();
+                    repo.toggleLike(_post.id);
+                    final refreshed = repo.getPostById(_post.id);
+                    if (refreshed != null) {
+                      setState(() {
+                        _post = refreshed;
+                      });
+                    }
+                  },
+                  icon: Icon(
+                    _post.liked ? Icons.favorite : Icons.favorite_border,
+                    color: _post.liked ? Colors.pink : null,
+                  ),
+                ),
+                Text('${_post.likes}'),
+                const SizedBox(width: 16),
+                const Icon(Icons.mode_comment_outlined),
+                const SizedBox(width: 8),
+                Text('${_post.comments.length}'),
+              ],
+            ),
             const Divider(),
             Expanded(
               child: _post.comments.isEmpty
@@ -614,34 +712,109 @@ class _PostDetailPageState extends State<PostDetailPage> {
                       separatorBuilder: (_, __) => const Divider(),
                       itemBuilder: (context, i) {
                         final c = _post.comments[i];
-                        return ListTile(
-                          leading: const Icon(Icons.person_outline),
-                          title: Row(
-                            children: [
-                              Text(c.authorName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 8),
-                              Text(c.authorHandle, style: TextStyle(color: Colors.grey[600])),
-                              const SizedBox(width: 8),
-                              Text(c.dateLabel, style: TextStyle(color: Colors.grey[600])),
-                            ],
-                          ),
-                          subtitle: Text(c.text),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.person_outline),
+                              title: Row(
+                                children: [
+                                  Text(c.authorName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  const SizedBox(width: 8),
+                                  Text(c.authorHandle, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                                  const SizedBox(width: 8),
+                                  Text(c.dateLabel, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                                ],
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(c.text),
+                                  const SizedBox(height: 4),
+                                  TextButton(
+                                    onPressed: () => _startReply(c),
+                                    child: const Text('Reply', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Show replies with indentation
+                            if (c.replies.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 56),
+                                child: Column(
+                                  children: c.replies.map((reply) => ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.subdirectory_arrow_right, size: 20),
+                                    title: Row(
+                                      children: [
+                                        Text(reply.authorName, 
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                        const SizedBox(width: 8),
+                                        Text(reply.dateLabel, 
+                                          style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 12)),
+                                      ],
+                                    ),
+                                    subtitle: Text(reply.text, style: const TextStyle(fontSize: 13)),
+                                  )).toList(),
+                                ),
+                              ),
+                          ],
                         );
                       },
                     ),
             ),
             const Divider(),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(hintText: 'Write a comment...'),
-                    onSubmitted: (_) => _addComment(),
-                  ),
+            if (_replyingTo != null)
+              Container(
+                color: isDark ? Colors.grey[850] : Colors.grey[100],
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Replying to ${_replyingTo!.authorName}',
+                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 12),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: _cancelReply,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
-                IconButton(onPressed: _addComment, icon: const Icon(Icons.send))
-              ],
+              ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: _replyingTo != null ? 'Write a reply...' : 'Write a comment...',
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                        ),
+                      ),
+                      onSubmitted: (_) => _addComment(parentComment: _replyingTo),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => _addComment(parentComment: _replyingTo),
+                    icon: const Icon(Icons.send),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
