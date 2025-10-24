@@ -1,8 +1,42 @@
 
-import 'package:flutter/material.dart'; 
+import 'package:flutter/material.dart';
+import 'pages/settings_page.dart';
+import 'pages/chapter_page.dart';
+import 'pages/calendar_page.dart';
+import 'pages/favorites_page.dart';
 
-void main() {
-  runApp(const FBLAApp());
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'providers/theme_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'providers/auth_service.dart';
+import 'pages/login_page.dart';
+import 'pages/signup_page.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
+
+  // Create and initialize the ThemeProvider
+  final themeProvider = ThemeProvider();
+  await themeProvider.initialize();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: themeProvider),
+        Provider<AuthService>(create: (_) => AuthService()),
+        StreamProvider<User?>(
+          create: (context) => context.read<AuthService>().authStateChanges,
+          initialData: null,
+        ),
+      ],
+      child: FBLAApp(),
+    ),
+  );
 }
 
 class FBLAApp extends StatelessWidget {
@@ -10,14 +44,19 @@ class FBLAApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FBLA APP',
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Sans-serif',
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-      ),
-      home: const HomeScreen(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final firebaseUser = context.watch<User?>();
+
+        return MaterialApp(
+          title: 'FBLA APP',
+          theme: themeProvider.currentTheme,
+          home: firebaseUser == null ? LoginPage() : const HomeScreen(),
+          routes: {
+            '/signup': (_) => const SignupPage(),
+          },
+        );
+      },
     );
   }
 }
@@ -182,6 +221,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final PostRepository repository;
   late List<Post> posts;
+  int _selectedIndex = 2; // Default to home tab
 
   @override
   void initState() {
@@ -219,6 +259,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _onNavigationItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  Widget _buildBody() {
+    switch (_selectedIndex) {
+      case 0:
+        return const SettingsPage();
+      case 1:
+        return const ChapterPage();
+      case 2:
+        return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 80, top: 8),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final p = posts[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: PostCard(
+                post: p,
+                onLike: () => _toggleLike(index),
+                onComments: () => _openComments(index),
+                onMenuSelected: (value) => _onMenuSelected(value, index),
+              ),
+            );
+          },
+        );
+      case 3:
+        return const CalendarPage();
+      case 4:
+        return const FavoritesPage();
+      default:
+        return const Center(child: Text('Page not found'));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,35 +313,35 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 80, top: 8),
-        itemCount: posts.length,
-        itemBuilder: (context, index) {
-          final p = posts[index];
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: PostCard(
-              post: p,
-              onLike: () => _toggleLike(index),
-              onComments: () => _openComments(index),
-              onMenuSelected: (value) => _onMenuSelected(value, index),
-            ),
-          );
-        },
-      ),
-      bottomNavigationBar: Container(
-        height: 64,
-        color: Colors.blue,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: const [
-            Icon(Icons.settings, color: Colors.white),
-            Icon(Icons.chat_bubble_outline, color: Colors.white),
-            Icon(Icons.home, color: Colors.white),
-            Icon(Icons.folder_open, color: Colors.white),
-            Icon(Icons.favorite_border, color: Colors.white),
-          ],
-        ),
+      body: _buildBody(),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavigationItemTapped,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Your Chapter',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Calendar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite_border),
+            label: 'Favorites',
+          ),
+        ],
       ),
     );
   }
