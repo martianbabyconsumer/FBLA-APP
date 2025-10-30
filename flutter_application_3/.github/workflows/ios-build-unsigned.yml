@@ -1,0 +1,46 @@
+name: Build iOS (unsigned .ipa)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-ios-unsigned:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - name: Install Flutter dependencies
+        run: |
+          flutter pub get
+
+      - name: Install CocoaPods
+        run: |
+          brew --version || true
+          sudo gem install cocoapods -v 1.12.0 || true
+          cd ios
+          pod install --repo-update
+
+      - name: Build iOS (unsigned .ipa)
+        run: |
+          flutter build ipa --no-codesign
+
+      - name: Upload unsigned .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: build/ios/ipa/*.ipa
+
+      - name: Upload xcarchive (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcarchive
+          path: build/ios/ipa/*.xcarchive
