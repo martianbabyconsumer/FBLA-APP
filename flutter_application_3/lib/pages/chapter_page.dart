@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/chapter_message.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'calendar_page.dart';
 
 class ChapterPage extends StatefulWidget {
   const ChapterPage({super.key});
@@ -16,12 +18,49 @@ class _ChapterPageState extends State<ChapterPage> {
   late Channel _selectedChannel;
   List<ChapterMessage> _messages = [];
   bool _showEmojiPicker = false;
+  
+  // Calendar state
+  late DateTime _focusedDay;
+  late DateTime _selectedDay;
+  final Map<DateTime, List<Event>> _chapterEvents = {};
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
 
   @override
   void initState() {
     super.initState();
     _initializeChannels();
     _loadMessages();
+    _initializeCalendar();
+  }
+
+  void _initializeCalendar() {
+    _focusedDay = DateTime.now();
+    _selectedDay = DateTime.now();
+    
+    // Add sample chapter events that match the calendar page
+    final now = DateTime.now();
+    _chapterEvents[DateTime(now.year, now.month, now.day + 2)] = [
+      Event(
+        title: 'Chapter Meeting',
+        description: 'Monthly FBLA chapter meeting in Room 201',
+        startTime: const TimeOfDay(hour: 15, minute: 30),
+        endTime: const TimeOfDay(hour: 16, minute: 30),
+        color: Colors.blue,
+      ),
+    ];
+    
+    _chapterEvents[DateTime(now.year, now.month, now.day + 5)] = [
+      Event(
+        title: 'Leadership Conference',
+        description: 'State Leadership Conference preparation meeting',
+        startTime: const TimeOfDay(hour: 14, minute: 0),
+        endTime: const TimeOfDay(hour: 16, minute: 0),
+        color: Colors.green,
+      ),
+    ];
   }
 
   void _initializeChannels() {
@@ -144,6 +183,133 @@ class _ChapterPageState extends State<ChapterPage> {
     });
   }
 
+  // Calendar helper methods
+  List<Event> _getEventsForDay(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _chapterEvents[normalizedDay] ?? [];
+  }
+
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
+    setState(() {
+      _selectedDay = selectedDay;
+      _focusedDay = focusedDay;
+    });
+  }
+
+  Future<void> _showAddEventDialog() async {
+    _titleController.clear();
+    _descriptionController.clear();
+    _startTime = null;
+    _endTime = null;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Event'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Enter event title',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Enter event description',
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (time != null) {
+                            setDialogState(() => _startTime = time);
+                          }
+                        },
+                        icon: const Icon(Icons.access_time),
+                        label: Text(_startTime != null
+                            ? _startTime!.format(context)
+                            : 'Start Time'),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (time != null) {
+                            setDialogState(() => _endTime = time);
+                          }
+                        },
+                        icon: const Icon(Icons.access_time),
+                        label: Text(_endTime != null
+                            ? _endTime!.format(context)
+                            : 'End Time'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('CANCEL'),
+            ),
+            TextButton(
+              onPressed: _titleController.text.trim().isEmpty
+                ? null
+                : () => Navigator.pop(context, true),
+              child: const Text('ADD'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      final event = Event(
+        title: _titleController.text,
+        description: _descriptionController.text,
+        startTime: _startTime,
+        endTime: _endTime,
+        color: Colors.blue,
+      );
+
+      setState(() {
+        final eventDate = DateTime(
+          _selectedDay.year,
+          _selectedDay.month,
+          _selectedDay.day,
+        );
+        
+        if (_chapterEvents[eventDate] == null) {
+          _chapterEvents[eventDate] = [event];
+        } else {
+          _chapterEvents[eventDate]!.add(event);
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -259,125 +425,14 @@ class _ChapterPageState extends State<ChapterPage> {
                     ],
                   ),
                 ),
-                // Messages list
+                // Content area - show calendar for chapter-calendar channel, messages for others
                 Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final message = _messages[index];
-                      final showHeader = index == 0 ||
-                          message.authorId != _messages[index - 1].authorId;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (showHeader) ...[
-                            const SizedBox(height: 16),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: theme.primaryColor,
-                                  child: Text(
-                                    message.authorName[0],
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  message.authorName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  DateFormat.yMMMd()
-                                      .add_jm()
-                                      .format(message.timestamp),
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? Colors.grey[400]
-                                        : Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                if (message.isPinned) ...[
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    Icons.push_pin,
-                                    size: 16,
-                                    color: theme.primaryColor,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                          Padding(
-                            padding: EdgeInsets.only(
-                              left: 48,
-                              top: showHeader ? 8 : 4,
-                              right: 16,
-                              bottom: 4,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(message.content),
-                                if (message.reactions.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 8,
-                                    children: message.reactions.map((reaction) {
-                                      final isReacted = reaction.userIds
-                                          .contains('currentUser');
-                                      return InkWell(
-                                        onTap: () => _toggleReaction(
-                                            message, reaction.emoji),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isReacted
-                                                ? theme.primaryColor
-                                                    .withOpacity(0.1)
-                                                : isDark
-                                                    ? Colors.grey[800]
-                                                    : Colors.grey[200],
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: isReacted
-                                                ? Border.all(
-                                                    color: theme.primaryColor,
-                                                  )
-                                                : null,
-                                          ),
-                                          child: Text(
-                                            '${reaction.emoji} ${reaction.count}',
-                                            style: TextStyle(
-                                              color: isReacted
-                                                  ? theme.primaryColor
-                                                  : null,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                  child: _selectedChannel.id == 'chapter-calendar'
+                      ? _buildCalendarView(theme, isDark)
+                      : _buildMessagesView(theme, isDark),
                 ),
                 // Message input
-                if (!_selectedChannel.isLocked)
+                if (!_selectedChannel.isLocked && _selectedChannel.id != 'chapter-calendar')
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -448,10 +503,268 @@ class _ChapterPageState extends State<ChapterPage> {
     );
   }
 
+  Widget _buildCalendarView(ThemeData theme, bool isDark) {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TableCalendar<Event>(
+                  firstDay: DateTime.utc(2024, 1, 1),
+                  lastDay: DateTime.utc(2025, 12, 31),
+                  focusedDay: _focusedDay,
+                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  calendarFormat: CalendarFormat.month,
+                  availableCalendarFormats: const {
+                    CalendarFormat.month: 'Month'
+                  },
+                  eventLoader: _getEventsForDay,
+                  startingDayOfWeek: StartingDayOfWeek.sunday,
+                  headerStyle: HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    leftChevronIcon: Icon(
+                      Icons.chevron_left,
+                      color: theme.colorScheme.primary,
+                    ),
+                    rightChevronIcon: Icon(
+                      Icons.chevron_right,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  calendarStyle: CalendarStyle(
+                    outsideDaysVisible: false,
+                    weekendTextStyle: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.grey[850],
+                    ),
+                    holidayTextStyle: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.grey[850],
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  onDaySelected: _onDaySelected,
+                  onPageChanged: (focusedDay) {
+                    setState(() {
+                      _focusedDay = focusedDay;
+                    });
+                  },
+                ),
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event, color: theme.primaryColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Events on ${DateFormat.yMMMd().format(_selectedDay)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle),
+                        onPressed: _showAddEventDialog,
+                        tooltip: 'Add Event',
+                        color: theme.primaryColor,
+                      ),
+                    ],
+                  ),
+                ),
+                ..._getEventsForDay(_selectedDay).map((event) {
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: ListTile(
+                      leading: Container(
+                        width: 12,
+                        height: double.infinity,
+                        color: event.color,
+                      ),
+                      title: Text(
+                        event.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (event.startTime != null && event.endTime != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(event.description),
+                        ],
+                      ),
+                      isThreeLine: true,
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          setState(() {
+                            final normalizedDay = DateTime(
+                              _selectedDay.year,
+                              _selectedDay.month,
+                              _selectedDay.day,
+                            );
+                            _chapterEvents[normalizedDay]?.remove(event);
+                            if (_chapterEvents[normalizedDay]?.isEmpty ?? false) {
+                              _chapterEvents.remove(normalizedDay);
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                }).toList(),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessagesView(ThemeData theme, bool isDark) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: _messages.length,
+      itemBuilder: (context, index) {
+        final message = _messages[index];
+        final showHeader = index == 0 ||
+            message.authorId != _messages[index - 1].authorId;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (showHeader) ...[
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: theme.primaryColor,
+                    child: Text(
+                      message.authorName[0],
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    message.authorName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    DateFormat.yMMMd()
+                        .add_jm()
+                        .format(message.timestamp),
+                    style: TextStyle(
+                      color: isDark
+                          ? Colors.grey[400]
+                          : Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  if (message.isPinned) ...[
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.push_pin,
+                      size: 16,
+                      color: theme.primaryColor,
+                    ),
+                  ],
+                ],
+              ),
+            ],
+            Padding(
+              padding: EdgeInsets.only(
+                left: 48,
+                top: showHeader ? 8 : 4,
+                right: 16,
+                bottom: 4,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(message.content),
+                  if (message.reactions.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: message.reactions.map((reaction) {
+                        final isReacted = reaction.userIds
+                            .contains('currentUser');
+                        return InkWell(
+                          onTap: () => _toggleReaction(
+                              message, reaction.emoji),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isReacted
+                                  ? theme.primaryColor
+                                      .withOpacity(0.1)
+                                  : isDark
+                                      ? Colors.grey[800]
+                                      : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                              border: isReacted
+                                  ? Border.all(
+                                      color: theme.primaryColor,
+                                    )
+                                  : null,
+                            ),
+                            child: Text(
+                              '${reaction.emoji} ${reaction.count}',
+                              style: TextStyle(
+                                color: isReacted
+                                    ? theme.primaryColor
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 }
