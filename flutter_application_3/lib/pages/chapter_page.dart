@@ -24,10 +24,6 @@ class _ChapterPageState extends State<ChapterPage> {
   // Calendar state
   late DateTime _focusedDay;
   late DateTime _selectedDay;
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
 
   @override
   void initState() {
@@ -173,32 +169,31 @@ class _ChapterPageState extends State<ChapterPage> {
 
   Future<void> _showAddEventDialog() async {
     final provider = Provider.of<CalendarProvider>(context, listen: false);
-    
-    _titleController.clear();
-    _descriptionController.clear();
-    _startTime = null;
-    _endTime = null;
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    TimeOfDay? startTime;
+    TimeOfDay? endTime;
 
     await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (builderContext, setDialogState) => AlertDialog(
+        builder: (stateContext, setState) => AlertDialog(
           title: const Text('Add Chapter Event'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: _titleController,
+                  controller: titleController,
                   decoration: const InputDecoration(
                     labelText: 'Title',
                     hintText: 'Enter event title',
                   ),
-                  onChanged: (value) => setDialogState(() {}),
+                  onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: _descriptionController,
+                  controller: descController,
                   decoration: const InputDecoration(
                     labelText: 'Description',
                     hintText: 'Enter event description',
@@ -216,13 +211,11 @@ class _ChapterPageState extends State<ChapterPage> {
                             initialTime: TimeOfDay.now(),
                           );
                           if (time != null) {
-                            setDialogState(() => _startTime = time);
+                            setState(() => startTime = time);
                           }
                         },
                         icon: const Icon(Icons.access_time),
-                        label: Text(_startTime != null
-                            ? _startTime!.format(dialogContext)
-                            : 'Start Time'),
+                        label: Text(startTime?.format(dialogContext) ?? 'Start Time'),
                       ),
                     ),
                     Expanded(
@@ -233,13 +226,11 @@ class _ChapterPageState extends State<ChapterPage> {
                             initialTime: TimeOfDay.now(),
                           );
                           if (time != null) {
-                            setDialogState(() => _endTime = time);
+                            setState(() => endTime = time);
                           }
                         },
                         icon: const Icon(Icons.access_time),
-                        label: Text(_endTime != null
-                            ? _endTime!.format(dialogContext)
-                            : 'End Time'),
+                        label: Text(endTime?.format(dialogContext) ?? 'End Time'),
                       ),
                     ),
                   ],
@@ -253,17 +244,16 @@ class _ChapterPageState extends State<ChapterPage> {
               child: const Text('CANCEL'),
             ),
             TextButton(
-              onPressed: _titleController.text.trim().isEmpty
+              onPressed: titleController.text.trim().isEmpty
                 ? null
                 : () {
                   final event = Event(
-                    title: _titleController.text,
-                    description: _descriptionController.text,
-                    startTime: _startTime,
-                    endTime: _endTime,
-                    color: Colors.blue,
+                    title: titleController.text.trim(),
+                    description: descController.text.trim(),
+                    startTime: startTime,
+                    endTime: endTime,
+                    color: Colors.orange,
                   );
-
                   provider.addChapterEvent(_selectedDay, event);
                   Navigator.pop(dialogContext, true);
                 },
@@ -722,8 +712,6 @@ class _ChapterPageState extends State<ChapterPage> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
-    _titleController.dispose();
-    _descriptionController.dispose();
     super.dispose();
   }
 }
