@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:provider/provider.dart';
+import '../providers/calendar_provider.dart';
 
 
 class Event {
@@ -29,8 +31,6 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
   late TabController _tabController;
   late DateTime _focusedDay;
   late DateTime _selectedDay;
-  final Map<DateTime, List<Event>> _personalEvents = {};
-  final Map<DateTime, List<Event>> _chapterEvents = {};
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   TimeOfDay? _startTime;
@@ -43,41 +43,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
     _selectedDay = DateTime.now();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChange);
-
-    // Add some sample events
-    final now = DateTime.now();
-    
-    // Chapter events
-    _chapterEvents[DateTime(now.year, now.month, now.day + 2)] = [
-      Event(
-        title: 'Chapter Meeting',
-        description: 'Monthly FBLA chapter meeting in Room 201',
-        startTime: const TimeOfDay(hour: 15, minute: 30),
-        endTime: const TimeOfDay(hour: 16, minute: 30),
-        color: Colors.blue,
-      ),
-    ];
-    
-    _chapterEvents[DateTime(now.year, now.month, now.day + 5)] = [
-      Event(
-        title: 'Leadership Conference',
-        description: 'State Leadership Conference preparation meeting',
-        startTime: const TimeOfDay(hour: 14, minute: 0),
-        endTime: const TimeOfDay(hour: 16, minute: 0),
-        color: Colors.green,
-      ),
-    ];
-
-    // Personal events
-    _personalEvents[DateTime(now.year, now.month, now.day + 1)] = [
-      Event(
-        title: 'Practice Presentation',
-        description: 'Practice for upcoming competition',
-        startTime: const TimeOfDay(hour: 16, minute: 0),
-        endTime: const TimeOfDay(hour: 17, minute: 0),
-        color: Colors.orange,
-      ),
-    ];
+    // Events are now managed by CalendarProvider
   }
 
   @override
@@ -99,17 +65,13 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
   }
 
   List<Event> _getEventsForDay(DateTime day) {
+    final provider = context.read<CalendarProvider>();
     // Normalize the date to midnight to ensure consistent lookup
-    final normalizedDay = DateTime(day.year, day.month, day.day);
     if (_tabController.index == 0) {
-      return _personalEvents[normalizedDay] ?? [];
+      return provider.getPersonalEventsForDay(day);
     } else {
-      return _chapterEvents[normalizedDay] ?? [];
+      return provider.getChapterEventsForDay(day);
     }
-  }
-
-  Map<DateTime, List<Event>> get _currentEvents {
-    return _tabController.index == 0 ? _personalEvents : _chapterEvents;
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -217,21 +179,13 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
         color: Colors.blue,
       );
 
-      setState(() {
-        // Create a DateTime with just the date components for the key
-        final eventDate = DateTime(
-          _selectedDay.year,
-          _selectedDay.month,
-          _selectedDay.day,
-        );
-        
-        final events = _currentEvents;
-        if (events[eventDate] == null) {
-          events[eventDate] = [event];
-        } else {
-          events[eventDate]!.add(event);
-        }
-      });
+      final provider = context.read<CalendarProvider>();
+      if (_tabController.index == 0) {
+        provider.addPersonalEvent(_selectedDay, event);
+      } else {
+        provider.addChapterEvent(_selectedDay, event);
+      }
+      setState(() {}); // Refresh the UI
     }
   }
 
@@ -313,27 +267,26 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
                   ),
                   direction: DismissDirection.endToStart,
                   onDismissed: (direction) {
-                    setState(() {
-                      final events = _currentEvents;
-                      events[_selectedDay]?.removeAt(index);
-                      if (events[_selectedDay]?.isEmpty ?? false) {
-                        events.remove(_selectedDay);
-                      }
-                    });
+                    final provider = context.read<CalendarProvider>();
+                    if (_tabController.index == 0) {
+                      provider.removePersonalEvent(_selectedDay, event);
+                    } else {
+                      provider.removeChapterEvent(_selectedDay, event);
+                    }
+                    setState(() {}); // Refresh the UI
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text('Event deleted'),
                         action: SnackBarAction(
                           label: 'UNDO',
                           onPressed: () {
-                            setState(() {
-                              final events = _currentEvents;
-                              if (events[_selectedDay] == null) {
-                                events[_selectedDay] = [event];
-                              } else {
-                                events[_selectedDay]!.insert(index, event);
-                              }
-                            });
+                            if (_tabController.index == 0) {
+                              provider.addPersonalEvent(_selectedDay, event);
+                            } else {
+                              provider.addChapterEvent(_selectedDay, event);
+                            }
+                            setState(() {}); // Refresh the UI
                           },
                         ),
                       ),

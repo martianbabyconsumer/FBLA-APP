@@ -3,6 +3,8 @@ import '../models/chapter_message.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'calendar_page.dart';
+import 'package:provider/provider.dart';
+import '../providers/calendar_provider.dart';
 
 class ChapterPage extends StatefulWidget {
   const ChapterPage({super.key});
@@ -22,7 +24,6 @@ class _ChapterPageState extends State<ChapterPage> {
   // Calendar state
   late DateTime _focusedDay;
   late DateTime _selectedDay;
-  final Map<DateTime, List<Event>> _chapterEvents = {};
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   TimeOfDay? _startTime;
@@ -39,28 +40,7 @@ class _ChapterPageState extends State<ChapterPage> {
   void _initializeCalendar() {
     _focusedDay = DateTime.now();
     _selectedDay = DateTime.now();
-    
-    // Add sample chapter events that match the calendar page
-    final now = DateTime.now();
-    _chapterEvents[DateTime(now.year, now.month, now.day + 2)] = [
-      Event(
-        title: 'Chapter Meeting',
-        description: 'Monthly FBLA chapter meeting in Room 201',
-        startTime: const TimeOfDay(hour: 15, minute: 30),
-        endTime: const TimeOfDay(hour: 16, minute: 30),
-        color: Colors.blue,
-      ),
-    ];
-    
-    _chapterEvents[DateTime(now.year, now.month, now.day + 5)] = [
-      Event(
-        title: 'Leadership Conference',
-        description: 'State Leadership Conference preparation meeting',
-        startTime: const TimeOfDay(hour: 14, minute: 0),
-        endTime: const TimeOfDay(hour: 16, minute: 0),
-        color: Colors.green,
-      ),
-    ];
+    // Events are now managed by CalendarProvider
   }
 
   void _initializeChannels() {
@@ -185,8 +165,8 @@ class _ChapterPageState extends State<ChapterPage> {
 
   // Calendar helper methods
   List<Event> _getEventsForDay(DateTime day) {
-    final normalizedDay = DateTime(day.year, day.month, day.day);
-    return _chapterEvents[normalizedDay] ?? [];
+    final provider = context.read<CalendarProvider>();
+    return provider.getChapterEventsForDay(day);
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -294,19 +274,9 @@ class _ChapterPageState extends State<ChapterPage> {
         color: Colors.blue,
       );
 
-      setState(() {
-        final eventDate = DateTime(
-          _selectedDay.year,
-          _selectedDay.month,
-          _selectedDay.day,
-        );
-        
-        if (_chapterEvents[eventDate] == null) {
-          _chapterEvents[eventDate] = [event];
-        } else {
-          _chapterEvents[eventDate]!.add(event);
-        }
-      });
+      final provider = context.read<CalendarProvider>();
+      provider.addChapterEvent(_selectedDay, event);
+      setState(() {}); // Refresh the UI
     }
   }
 
@@ -617,17 +587,9 @@ class _ChapterPageState extends State<ChapterPage> {
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
-                          setState(() {
-                            final normalizedDay = DateTime(
-                              _selectedDay.year,
-                              _selectedDay.month,
-                              _selectedDay.day,
-                            );
-                            _chapterEvents[normalizedDay]?.remove(event);
-                            if (_chapterEvents[normalizedDay]?.isEmpty ?? false) {
-                              _chapterEvents.remove(normalizedDay);
-                            }
-                          });
+                          final provider = context.read<CalendarProvider>();
+                          provider.removeChapterEvent(_selectedDay, event);
+                          setState(() {}); // Refresh the UI
                         },
                       ),
                     ),

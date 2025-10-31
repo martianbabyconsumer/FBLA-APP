@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/calendar_provider.dart';
 import 'repository/post_repository.dart';
 import 'widgets/app_scaffold.dart';
 import 'pages/settings_page.dart';
@@ -22,6 +23,9 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider<PostRepository>(
           create: (_) => InMemoryPostRepository(),
+        ),
+        ChangeNotifierProvider<CalendarProvider>(
+          create: (_) => CalendarProvider(),
         ),
       ],
       child: const FBLAApp(),
