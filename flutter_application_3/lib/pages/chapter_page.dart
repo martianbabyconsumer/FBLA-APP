@@ -177,90 +177,94 @@ class _ChapterPageState extends State<ChapterPage> {
     await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (stateContext, setState) => AlertDialog(
-          title: const Text('Add Chapter Event'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'Enter event title',
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    hintText: 'Enter event description',
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () async {
-                          final time = await showTimePicker(
-                            context: dialogContext,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (time != null) {
-                            setState(() => startTime = time);
-                          }
-                        },
-                        icon: const Icon(Icons.access_time),
-                        label: Text(startTime?.format(dialogContext) ?? 'Start Time'),
-                      ),
+        builder: (stateContext, setState) {
+          final canAdd = titleController.text.trim().isNotEmpty;
+          
+          return AlertDialog(
+            title: const Text('Add Chapter Event'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      hintText: 'Enter event title',
                     ),
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () async {
-                          final time = await showTimePicker(
-                            context: dialogContext,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (time != null) {
-                            setState(() => endTime = time);
-                          }
-                        },
-                        icon: const Icon(Icons.access_time),
-                        label: Text(endTime?.format(dialogContext) ?? 'End Time'),
-                      ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Enter event description',
                     ),
-                  ],
-                ),
-              ],
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () async {
+                            final time = await showTimePicker(
+                              context: dialogContext,
+                              initialTime: TimeOfDay.now(),
+                            );
+                            if (time != null) {
+                              setState(() => startTime = time);
+                            }
+                          },
+                          icon: const Icon(Icons.access_time),
+                          label: Text(startTime?.format(dialogContext) ?? 'Start Time'),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () async {
+                            final time = await showTimePicker(
+                              context: dialogContext,
+                              initialTime: TimeOfDay.now(),
+                            );
+                            if (time != null) {
+                              setState(() => endTime = time);
+                            }
+                          },
+                          icon: const Icon(Icons.access_time),
+                          label: Text(endTime?.format(dialogContext) ?? 'End Time'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: titleController.text.trim().isEmpty
-                ? null
-                : () {
-                  final event = Event(
-                    title: titleController.text.trim(),
-                    description: descController.text.trim(),
-                    startTime: startTime,
-                    endTime: endTime,
-                    color: Colors.orange,
-                  );
-                  provider.addChapterEvent(_selectedDay, event);
-                  Navigator.pop(dialogContext, true);
-                },
-              child: const Text('ADD'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('CANCEL'),
+              ),
+              TextButton(
+                onPressed: canAdd
+                  ? () {
+                    final event = Event(
+                      title: titleController.text.trim(),
+                      description: descController.text.trim(),
+                      startTime: startTime,
+                      endTime: endTime,
+                      color: Colors.orange,
+                    );
+                    provider.addChapterEvent(_selectedDay, event);
+                    Navigator.pop(dialogContext, true);
+                  }
+                  : null,
+                child: const Text('ADD'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

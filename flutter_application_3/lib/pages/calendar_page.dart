@@ -98,6 +98,8 @@ class _CalendarPageState extends State<CalendarPage>
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (stateContext, setState) {
+            final canAdd = titleController.text.trim().isNotEmpty;
+            
             return AlertDialog(
               title: Text('Add ${isPersonal ? "Personal" : "Chapter"} Event'),
               content: SingleChildScrollView(
@@ -169,9 +171,8 @@ class _CalendarPageState extends State<CalendarPage>
                   child: const Text('CANCEL'),
                 ),
                 TextButton(
-                  onPressed: titleController.text.trim().isEmpty
-                      ? null
-                      : () {
+                  onPressed: canAdd
+                      ? () {
                           final event = Event(
                             title: titleController.text.trim(),
                             description: descController.text.trim(),
@@ -185,7 +186,8 @@ class _CalendarPageState extends State<CalendarPage>
                             provider.addChapterEvent(selectedDay, event);
                           }
                           Navigator.pop(dialogContext);
-                        },
+                        }
+                      : null,
                   child: const Text('ADD'),
                 ),
               ],
