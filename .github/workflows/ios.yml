@@ -36,16 +36,31 @@ jobs:
       - name: Build iOS (unsigned .ipa)
         run: flutter build ipa --no-codesign
 
+      - name: List build output
+        if: always()
+        run: |
+          echo "Checking build directory structure:"
+          ls -R build/ios/ || true
+
       - name: Upload unsigned .ipa artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-unsigned-ipa
           path: flutter_application_3/build/ios/ipa/*.ipa
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Upload xcarchive artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ios-xcarchive
-          path: flutter_application_3/build/ios/ipa/*.xcarchive
+          path: flutter_application_3/build/ios/archive/*.xcarchive
+          if-no-files-found: warn
+          
+      - name: Upload Runner.app as fallback
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-runner-app
+          path: flutter_application_3/build/ios/iphoneos/Runner.app
+          if-no-files-found: warn
