@@ -64,16 +64,6 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
     }
   }
 
-  List<Event> _getEventsForDay(DateTime day) {
-    final provider = context.read<CalendarProvider>();
-    // Normalize the date to midnight to ensure consistent lookup
-    if (_tabController.index == 0) {
-      return provider.getPersonalEventsForDay(day);
-    } else {
-      return provider.getChapterEventsForDay(day);
-    }
-  }
-
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     setState(() {
       _selectedDay = selectedDay;
@@ -194,152 +184,163 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.person), text: 'Personal'),
-            Tab(icon: Icon(Icons.group), text: 'Chapter'),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          TableCalendar<Event>(
-            firstDay: DateTime.utc(2024, 1, 1),
-            lastDay: DateTime.utc(2025, 12, 31),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            calendarFormat: CalendarFormat.month,
-            availableCalendarFormats: const {
-              CalendarFormat.month: 'Month'
-            },
-            eventLoader: _getEventsForDay,
-            startingDayOfWeek: StartingDayOfWeek.sunday,
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              leftChevronIcon: Icon(
-                Icons.chevron_left,
-                color: theme.colorScheme.primary,
-              ),
-              rightChevronIcon: Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.primary,
-              ),
+    return Consumer<CalendarProvider>(
+      builder: (context, calendarProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            bottom: TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(icon: Icon(Icons.person), text: 'Personal'),
+                Tab(icon: Icon(Icons.group), text: 'Chapter'),
+              ],
             ),
-            calendarStyle: CalendarStyle(
-              outsideDaysVisible: false,
-              weekendTextStyle: TextStyle(
-                color: isDark ? Colors.white70 : Colors.grey[850],
-              ),
-              holidayTextStyle: TextStyle(
-                color: isDark ? Colors.white70 : Colors.grey[850],
-              ),
-              selectedDecoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
-              todayDecoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.3),
-                shape: BoxShape.circle,
-              ),
-            ),
-            onDaySelected: _onDaySelected,
-            onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
-            },
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _getEventsForDay(_selectedDay).length,
-              itemBuilder: (context, index) {
-                final event = _getEventsForDay(_selectedDay)[index];
-                return Dismissible(
-                  key: ObjectKey(event),
-                  background: Container(
-                    color: Colors.red,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 16),
-                    child: const Icon(Icons.delete, color: Colors.white),
+          body: Column(
+            children: [
+              TableCalendar<Event>(
+                firstDay: DateTime.utc(2024, 1, 1),
+                lastDay: DateTime.utc(2025, 12, 31),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                calendarFormat: CalendarFormat.month,
+                availableCalendarFormats: const {
+                  CalendarFormat.month: 'Month'
+                },
+                eventLoader: (day) {
+                  if (_tabController.index == 0) {
+                    return calendarProvider.getPersonalEventsForDay(day);
+                  } else {
+                    return calendarProvider.getChapterEventsForDay(day);
+                  }
+                },
+                startingDayOfWeek: StartingDayOfWeek.sunday,
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  leftChevronIcon: Icon(
+                    Icons.chevron_left,
+                    color: theme.colorScheme.primary,
                   ),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (direction) {
-                    final provider = context.read<CalendarProvider>();
-                    if (_tabController.index == 0) {
-                      provider.removePersonalEvent(_selectedDay, event);
-                    } else {
-                      provider.removeChapterEvent(_selectedDay, event);
-                    }
-                    setState(() {}); // Refresh the UI
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Event deleted'),
-                        action: SnackBarAction(
-                          label: 'UNDO',
-                          onPressed: () {
-                            if (_tabController.index == 0) {
-                              provider.addPersonalEvent(_selectedDay, event);
-                            } else {
-                              provider.addChapterEvent(_selectedDay, event);
-                            }
-                            setState(() {}); // Refresh the UI
-                          },
+                  rightChevronIcon: Icon(
+                    Icons.chevron_right,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                calendarStyle: CalendarStyle(
+                  outsideDaysVisible: false,
+                  weekendTextStyle: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.grey[850],
+                  ),
+                  holidayTextStyle: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.grey[850],
+                  ),
+                  selectedDecoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  todayDecoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                onDaySelected: _onDaySelected,
+                onPageChanged: (focusedDay) {
+                  _focusedDay = focusedDay;
+                },
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _tabController.index == 0
+                      ? calendarProvider.getPersonalEventsForDay(_selectedDay).length
+                      : calendarProvider.getChapterEventsForDay(_selectedDay).length,
+                  itemBuilder: (context, index) {
+                    final event = _tabController.index == 0
+                        ? calendarProvider.getPersonalEventsForDay(_selectedDay)[index]
+                        : calendarProvider.getChapterEventsForDay(_selectedDay)[index];
+                    return Dismissible(
+                      key: ObjectKey(event),
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 16),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) {
+                        if (_tabController.index == 0) {
+                          calendarProvider.removePersonalEvent(_selectedDay, event);
+                        } else {
+                          calendarProvider.removeChapterEvent(_selectedDay, event);
+                        }
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Event deleted'),
+                            action: SnackBarAction(
+                              label: 'UNDO',
+                              onPressed: () {
+                                if (_tabController.index == 0) {
+                                  calendarProvider.addPersonalEvent(_selectedDay, event);
+                                } else {
+                                  calendarProvider.addChapterEvent(_selectedDay, event);
+                                }
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: ListTile(
+                          leading: Container(
+                            width: 12,
+                            height: double.infinity,
+                            color: event.color,
+                          ),
+                          title: Text(
+                            event.title,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (event.startTime != null && event.endTime != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              Text(event.description),
+                            ],
+                          ),
+                          isThreeLine: true,
                         ),
                       ),
                     );
                   },
-                  child: Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    child: ListTile(
-                      leading: Container(
-                        width: 12,
-                        height: double.infinity,
-                        color: event.color,
-                      ),
-                      title: Text(
-                        event.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (event.startTime != null && event.endTime != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 4),
-                          Text(event.description),
-                        ],
-                      ),
-                      isThreeLine: true,
-                    ),
-                  ),
-                );
-              },
+                ),
+              ),
+            ],
+          ),
+          floatingActionButton: SizedBox(
+            width: 140,
+            child: FloatingActionButton.extended(
+              onPressed: _showAddEventDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('New Event'),
             ),
           ),
-        ],
-      ),
-      floatingActionButton: SizedBox(
-        width: 140,
-        child: FloatingActionButton.extended(
-          onPressed: _showAddEventDialog,
-          icon: const Icon(Icons.add),
-          label: const Text('New Event'),
-        ),
-      ),
+        );
+      },
     );
   }
 }

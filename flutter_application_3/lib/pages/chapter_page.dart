@@ -164,11 +164,6 @@ class _ChapterPageState extends State<ChapterPage> {
   }
 
   // Calendar helper methods
-  List<Event> _getEventsForDay(DateTime day) {
-    final provider = context.read<CalendarProvider>();
-    return provider.getChapterEventsForDay(day);
-  }
-
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     setState(() {
       _selectedDay = selectedDay;
@@ -474,133 +469,135 @@ class _ChapterPageState extends State<ChapterPage> {
   }
 
   Widget _buildCalendarView(ThemeData theme, bool isDark) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                TableCalendar<Event>(
-                  firstDay: DateTime.utc(2024, 1, 1),
-                  lastDay: DateTime.utc(2025, 12, 31),
-                  focusedDay: _focusedDay,
-                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                  calendarFormat: CalendarFormat.month,
-                  availableCalendarFormats: const {
-                    CalendarFormat.month: 'Month'
-                  },
-                  eventLoader: _getEventsForDay,
-                  startingDayOfWeek: StartingDayOfWeek.sunday,
-                  headerStyle: HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                    leftChevronIcon: Icon(
-                      Icons.chevron_left,
-                      color: theme.colorScheme.primary,
-                    ),
-                    rightChevronIcon: Icon(
-                      Icons.chevron_right,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  calendarStyle: CalendarStyle(
-                    outsideDaysVisible: false,
-                    weekendTextStyle: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.grey[850],
-                    ),
-                    holidayTextStyle: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.grey[850],
-                    ),
-                    selectedDecoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    todayDecoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  onDaySelected: _onDaySelected,
-                  onPageChanged: (focusedDay) {
-                    setState(() {
-                      _focusedDay = focusedDay;
-                    });
-                  },
-                ),
-                const Divider(),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Icon(Icons.event, color: theme.primaryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Events on ${DateFormat.yMMMd().format(_selectedDay)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+    return Consumer<CalendarProvider>(
+      builder: (context, calendarProvider, child) {
+        return Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TableCalendar<Event>(
+                      firstDay: DateTime.utc(2024, 1, 1),
+                      lastDay: DateTime.utc(2025, 12, 31),
+                      focusedDay: _focusedDay,
+                      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                      calendarFormat: CalendarFormat.month,
+                      availableCalendarFormats: const {
+                        CalendarFormat.month: 'Month'
+                      },
+                      eventLoader: (day) => calendarProvider.getChapterEventsForDay(day),
+                      startingDayOfWeek: StartingDayOfWeek.sunday,
+                      headerStyle: HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: true,
+                        leftChevronIcon: Icon(
+                          Icons.chevron_left,
+                          color: theme.colorScheme.primary,
+                        ),
+                        rightChevronIcon: Icon(
+                          Icons.chevron_right,
+                          color: theme.colorScheme.primary,
                         ),
                       ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle),
-                        onPressed: _showAddEventDialog,
-                        tooltip: 'Add Event',
-                        color: theme.primaryColor,
+                      calendarStyle: CalendarStyle(
+                        outsideDaysVisible: false,
+                        weekendTextStyle: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.grey[850],
+                        ),
+                        holidayTextStyle: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.grey[850],
+                        ),
+                        selectedDecoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        todayDecoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.3),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                ..._getEventsForDay(_selectedDay).map((event) {
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
+                      onDaySelected: _onDaySelected,
+                      onPageChanged: (focusedDay) {
+                        setState(() {
+                          _focusedDay = focusedDay;
+                        });
+                      },
                     ),
-                    child: ListTile(
-                      leading: Container(
-                        width: 12,
-                        height: double.infinity,
-                        color: event.color,
-                      ),
-                      title: Text(
-                        event.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
                         children: [
-                          if (event.startTime != null && event.endTime != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                              ),
+                          Icon(Icons.event, color: theme.primaryColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Events on ${DateFormat.yMMMd().format(_selectedDay)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
-                          ],
-                          const SizedBox(height: 4),
-                          Text(event.description),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle),
+                            onPressed: _showAddEventDialog,
+                            tooltip: 'Add Event',
+                            color: theme.primaryColor,
+                          ),
                         ],
                       ),
-                      isThreeLine: true,
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          final provider = context.read<CalendarProvider>();
-                          provider.removeChapterEvent(_selectedDay, event);
-                          setState(() {}); // Refresh the UI
-                        },
-                      ),
                     ),
-                  );
-                }).toList(),
-                const SizedBox(height: 80),
-              ],
+                    ...calendarProvider.getChapterEventsForDay(_selectedDay).map((event) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        child: ListTile(
+                          leading: Container(
+                            width: 12,
+                            height: double.infinity,
+                            color: event.color,
+                          ),
+                          title: Text(
+                            event.title,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (event.startTime != null && event.endTime != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              Text(event.description),
+                            ],
+                          ),
+                          isThreeLine: true,
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              calendarProvider.removeChapterEvent(_selectedDay, event);
+                            },
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
