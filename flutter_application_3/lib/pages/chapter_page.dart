@@ -171,7 +171,7 @@ class _ChapterPageState extends State<ChapterPage> {
     });
   }
 
-  Future<void> _showAddEventDialog() async {
+  Future<void> _showAddEventDialog(CalendarProvider provider) async {
     _titleController.clear();
     _descriptionController.clear();
     _startTime = null;
@@ -180,7 +180,7 @@ class _ChapterPageState extends State<ChapterPage> {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (builderContext, setDialogState) => AlertDialog(
           title: const Text('Add Event'),
           content: SingleChildScrollView(
             child: Column(
@@ -269,8 +269,8 @@ class _ChapterPageState extends State<ChapterPage> {
         color: Colors.blue,
       );
 
-      // Use the provider from the widget's context, not the dialog context
-      Provider.of<CalendarProvider>(context, listen: false).addChapterEvent(_selectedDay, event);
+      // Use the provider reference passed as parameter
+      provider.addChapterEvent(_selectedDay, event);
     }
   }
 
@@ -540,7 +540,7 @@ class _ChapterPageState extends State<ChapterPage> {
                           const Spacer(),
                           IconButton(
                             icon: const Icon(Icons.add_circle),
-                            onPressed: _showAddEventDialog,
+                            onPressed: () => _showAddEventDialog(calendarProvider),
                             tooltip: 'Add Event',
                             color: theme.primaryColor,
                           ),

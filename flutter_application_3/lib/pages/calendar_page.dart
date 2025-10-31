@@ -71,7 +71,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
     });
   }
 
-  Future<void> _showAddEventDialog() async {
+  Future<void> _showAddEventDialog(CalendarProvider provider) async {
     _titleController.clear();
     _descriptionController.clear();
     _startTime = null;
@@ -80,7 +80,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (builderContext, setDialogState) => AlertDialog(
           title: const Text('Add Event'),
           content: SingleChildScrollView(
             child: Column(
@@ -169,8 +169,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
         color: Colors.blue,
       );
 
-      // Use Provider.of with listen: false instead of context.read
-      final provider = Provider.of<CalendarProvider>(context, listen: false);
+      // Use the provider reference passed as parameter
       if (_tabController.index == 0) {
         provider.addPersonalEvent(_selectedDay, event);
       } else {
@@ -334,7 +333,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
           floatingActionButton: SizedBox(
             width: 140,
             child: FloatingActionButton.extended(
-              onPressed: _showAddEventDialog,
+              onPressed: () => _showAddEventDialog(calendarProvider),
               icon: const Icon(Icons.add),
               label: const Text('New Event'),
             ),
