@@ -2,22 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
 import '../providers/calendar_provider.dart';
-
-class Event {
-  final String title;
-  final String description;
-  final TimeOfDay? startTime;
-  final TimeOfDay? endTime;
-  final Color color;
-
-  Event({
-    required this.title,
-    required this.description,
-    this.startTime,
-    this.endTime,
-    this.color = Colors.blue,
-  });
-}
+import '../models/event.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});

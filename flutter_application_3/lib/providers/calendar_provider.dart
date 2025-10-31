@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../pages/calendar_page.dart';
+import '../models/event.dart';
 
 class CalendarProvider extends ChangeNotifier {
   final Map<DateTime, List<Event>> _personalEvents = {};

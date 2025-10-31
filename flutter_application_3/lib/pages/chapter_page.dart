@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/chapter_message.dart';
+import '../models/event.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'calendar_page.dart';
 import 'package:provider/provider.dart';
 import '../providers/calendar_provider.dart';
 
