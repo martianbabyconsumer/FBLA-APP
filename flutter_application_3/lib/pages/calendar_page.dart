@@ -43,7 +43,6 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
     _selectedDay = DateTime.now();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChange);
-    // Events are now managed by CalendarProvider
   }
 
   @override
@@ -58,7 +57,6 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
   void _handleTabChange() {
     if (_tabController.indexIsChanging) {
       setState(() {
-        // Force a refresh of the selected day's events
         _onDaySelected(_selectedDay, _focusedDay);
       });
     }
@@ -71,13 +69,15 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
     });
   }
 
-  Future<void> _showAddEventDialog(CalendarProvider provider) async {
+  void _showAddEventDialog() {
+    final provider = Provider.of<CalendarProvider>(context, listen: false);
+    
     _titleController.clear();
     _descriptionController.clear();
     _startTime = null;
     _endTime = null;
 
-    final result = await showDialog<bool>(
+    showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (builderContext, setDialogState) => AlertDialog(
@@ -92,6 +92,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
                     labelText: 'Title',
                     hintText: 'Enter event title',
                   ),
+                  onChanged: (value) => setDialogState(() {}),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -109,7 +110,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
                       child: TextButton.icon(
                         onPressed: () async {
                           final time = await showTimePicker(
-                            context: context,
+                            context: dialogContext,
                             initialTime: TimeOfDay.now(),
                           );
                           if (time != null) {
@@ -118,7 +119,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
                         },
                         icon: const Icon(Icons.access_time),
                         label: Text(_startTime != null
-                            ? _startTime!.format(context)
+                            ? _startTime!.format(dialogContext)
                             : 'Start Time'),
                       ),
                     ),
@@ -126,7 +127,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
                       child: TextButton.icon(
                         onPressed: () async {
                           final time = await showTimePicker(
-                            context: context,
+                            context: dialogContext,
                             initialTime: TimeOfDay.now(),
                           );
                           if (time != null) {
@@ -135,7 +136,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
                         },
                         icon: const Icon(Icons.access_time),
                         label: Text(_endTime != null
-                            ? _endTime!.format(context)
+                            ? _endTime!.format(dialogContext)
                             : 'End Time'),
                       ),
                     ),
@@ -151,31 +152,30 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
             ),
             TextButton(
               onPressed: _titleController.text.trim().isEmpty
-                ? null  // Disable the button if title is empty
-                : () => Navigator.pop(dialogContext, true),
+                ? null
+                : () {
+                  final event = Event(
+                    title: _titleController.text,
+                    description: _descriptionController.text,
+                    startTime: _startTime,
+                    endTime: _endTime,
+                    color: Colors.blue,
+                  );
+
+                  if (_tabController.index == 0) {
+                    provider.addPersonalEvent(_selectedDay, event);
+                  } else {
+                    provider.addChapterEvent(_selectedDay, event);
+                  }
+                  
+                  Navigator.pop(dialogContext, true);
+                },
               child: const Text('ADD'),
             ),
           ],
         ),
       ),
     );
-
-    if (result == true && mounted) {
-      final event = Event(
-        title: _titleController.text,
-        description: _descriptionController.text,
-        startTime: _startTime,
-        endTime: _endTime,
-        color: Colors.blue,
-      );
-
-      // Use the provider reference passed as parameter
-      if (_tabController.index == 0) {
-        provider.addPersonalEvent(_selectedDay, event);
-      } else {
-        provider.addChapterEvent(_selectedDay, event);
-      }
-    }
   }
 
   @override
@@ -185,6 +185,10 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
 
     return Consumer<CalendarProvider>(
       builder: (context, calendarProvider, child) {
+        final currentEvents = _tabController.index == 0
+            ? calendarProvider.getPersonalEventsForDay(_selectedDay)
+            : calendarProvider.getChapterEventsForDay(_selectedDay);
+
         return Scaffold(
           appBar: AppBar(
             bottom: TabBar(
@@ -250,90 +254,96 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: ListView.builder(
-                  itemCount: _tabController.index == 0
-                      ? calendarProvider.getPersonalEventsForDay(_selectedDay).length
-                      : calendarProvider.getChapterEventsForDay(_selectedDay).length,
-                  itemBuilder: (context, index) {
-                    final event = _tabController.index == 0
-                        ? calendarProvider.getPersonalEventsForDay(_selectedDay)[index]
-                        : calendarProvider.getChapterEventsForDay(_selectedDay)[index];
-                    return Dismissible(
-                      key: ObjectKey(event),
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 16),
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (direction) {
-                        if (_tabController.index == 0) {
-                          calendarProvider.removePersonalEvent(_selectedDay, event);
-                        } else {
-                          calendarProvider.removeChapterEvent(_selectedDay, event);
-                        }
-                        
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Event deleted'),
-                            action: SnackBarAction(
-                              label: 'UNDO',
-                              onPressed: () {
-                                if (_tabController.index == 0) {
-                                  calendarProvider.addPersonalEvent(_selectedDay, event);
-                                } else {
-                                  calendarProvider.addChapterEvent(_selectedDay, event);
-                                }
-                              },
-                            ),
+                child: currentEvents.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No events for this day',
+                          style: TextStyle(
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            fontSize: 16,
                           ),
-                        );
-                      },
-                      child: Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
                         ),
-                        child: ListTile(
-                          leading: Container(
-                            width: 12,
-                            height: double.infinity,
-                            color: event.color,
-                          ),
-                          title: Text(
-                            event.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (event.startTime != null && event.endTime != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
+                      )
+                    : ListView.builder(
+                        itemCount: currentEvents.length,
+                        itemBuilder: (context, index) {
+                          final event = currentEvents[index];
+                          return Dismissible(
+                            key: Key('${event.title}_${event.description}_$index'),
+                            background: Container(
+                              color: Colors.red,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 16),
+                              child: const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            direction: DismissDirection.endToStart,
+                            onDismissed: (direction) {
+                              if (_tabController.index == 0) {
+                                calendarProvider.removePersonalEvent(_selectedDay, event);
+                              } else {
+                                calendarProvider.removeChapterEvent(_selectedDay, event);
+                              }
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Event deleted'),
+                                  action: SnackBarAction(
+                                    label: 'UNDO',
+                                    onPressed: () {
+                                      if (_tabController.index == 0) {
+                                        calendarProvider.addPersonalEvent(_selectedDay, event);
+                                      } else {
+                                        calendarProvider.addChapterEvent(_selectedDay, event);
+                                      }
+                                    },
                                   ),
                                 ),
-                              ],
-                              const SizedBox(height: 4),
-                              Text(event.description),
-                            ],
-                          ),
-                          isThreeLine: true,
-                        ),
+                              );
+                            },
+                            child: Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              child: ListTile(
+                                leading: Container(
+                                  width: 12,
+                                  height: double.infinity,
+                                  color: event.color,
+                                ),
+                                title: Text(
+                                  event.title,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (event.startTime != null && event.endTime != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 4),
+                                    Text(event.description),
+                                  ],
+                                ),
+                                isThreeLine: true,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
           floatingActionButton: SizedBox(
             width: 140,
             child: FloatingActionButton.extended(
-              onPressed: () => _showAddEventDialog(calendarProvider),
+              onPressed: _showAddEventDialog,
               icon: const Icon(Icons.add),
               label: const Text('New Event'),
             ),

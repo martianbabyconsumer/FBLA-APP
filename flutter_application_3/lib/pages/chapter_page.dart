@@ -171,17 +171,19 @@ class _ChapterPageState extends State<ChapterPage> {
     });
   }
 
-  Future<void> _showAddEventDialog(CalendarProvider provider) async {
+  Future<void> _showAddEventDialog() async {
+    final provider = Provider.of<CalendarProvider>(context, listen: false);
+    
     _titleController.clear();
     _descriptionController.clear();
     _startTime = null;
     _endTime = null;
 
-    final result = await showDialog<bool>(
+    await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (builderContext, setDialogState) => AlertDialog(
-          title: const Text('Add Event'),
+          title: const Text('Add Chapter Event'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -192,6 +194,7 @@ class _ChapterPageState extends State<ChapterPage> {
                     labelText: 'Title',
                     hintText: 'Enter event title',
                   ),
+                  onChanged: (value) => setDialogState(() {}),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -209,7 +212,7 @@ class _ChapterPageState extends State<ChapterPage> {
                       child: TextButton.icon(
                         onPressed: () async {
                           final time = await showTimePicker(
-                            context: context,
+                            context: dialogContext,
                             initialTime: TimeOfDay.now(),
                           );
                           if (time != null) {
@@ -218,7 +221,7 @@ class _ChapterPageState extends State<ChapterPage> {
                         },
                         icon: const Icon(Icons.access_time),
                         label: Text(_startTime != null
-                            ? _startTime!.format(context)
+                            ? _startTime!.format(dialogContext)
                             : 'Start Time'),
                       ),
                     ),
@@ -226,7 +229,7 @@ class _ChapterPageState extends State<ChapterPage> {
                       child: TextButton.icon(
                         onPressed: () async {
                           final time = await showTimePicker(
-                            context: context,
+                            context: dialogContext,
                             initialTime: TimeOfDay.now(),
                           );
                           if (time != null) {
@@ -235,7 +238,7 @@ class _ChapterPageState extends State<ChapterPage> {
                         },
                         icon: const Icon(Icons.access_time),
                         label: Text(_endTime != null
-                            ? _endTime!.format(context)
+                            ? _endTime!.format(dialogContext)
                             : 'End Time'),
                       ),
                     ),
@@ -252,26 +255,24 @@ class _ChapterPageState extends State<ChapterPage> {
             TextButton(
               onPressed: _titleController.text.trim().isEmpty
                 ? null
-                : () => Navigator.pop(dialogContext, true),
+                : () {
+                  final event = Event(
+                    title: _titleController.text,
+                    description: _descriptionController.text,
+                    startTime: _startTime,
+                    endTime: _endTime,
+                    color: Colors.blue,
+                  );
+
+                  provider.addChapterEvent(_selectedDay, event);
+                  Navigator.pop(dialogContext, true);
+                },
               child: const Text('ADD'),
             ),
           ],
         ),
       ),
     );
-
-    if (result == true && mounted) {
-      final event = Event(
-        title: _titleController.text,
-        description: _descriptionController.text,
-        startTime: _startTime,
-        endTime: _endTime,
-        color: Colors.blue,
-      );
-
-      // Use the provider reference passed as parameter
-      provider.addChapterEvent(_selectedDay, event);
-    }
   }
 
   @override
@@ -540,7 +541,7 @@ class _ChapterPageState extends State<ChapterPage> {
                           const Spacer(),
                           IconButton(
                             icon: const Icon(Icons.add_circle),
-                            onPressed: () => _showAddEventDialog(calendarProvider),
+                            onPressed: _showAddEventDialog,
                             tooltip: 'Add Event',
                             color: theme.primaryColor,
                           ),
