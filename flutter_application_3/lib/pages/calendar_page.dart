@@ -79,7 +79,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Event'),
           content: SingleChildScrollView(
@@ -146,13 +146,13 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('CANCEL'),
             ),
             TextButton(
               onPressed: _titleController.text.trim().isEmpty
                 ? null  // Disable the button if title is empty
-                : () => Navigator.pop(context, true),
+                : () => Navigator.pop(dialogContext, true),
               child: const Text('ADD'),
             ),
           ],
@@ -160,7 +160,7 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
       ),
     );
 
-    if (result == true) {
+    if (result == true && mounted) {
       final event = Event(
         title: _titleController.text,
         description: _descriptionController.text,
@@ -169,13 +169,13 @@ class _CalendarPageState extends State<CalendarPage> with SingleTickerProviderSt
         color: Colors.blue,
       );
 
-      final provider = context.read<CalendarProvider>();
+      // Use Provider.of with listen: false instead of context.read
+      final provider = Provider.of<CalendarProvider>(context, listen: false);
       if (_tabController.index == 0) {
         provider.addPersonalEvent(_selectedDay, event);
       } else {
         provider.addChapterEvent(_selectedDay, event);
       }
-      setState(() {}); // Refresh the UI
     }
   }
 

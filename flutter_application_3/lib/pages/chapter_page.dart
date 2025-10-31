@@ -179,7 +179,7 @@ class _ChapterPageState extends State<ChapterPage> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Event'),
           content: SingleChildScrollView(
@@ -246,13 +246,13 @@ class _ChapterPageState extends State<ChapterPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('CANCEL'),
             ),
             TextButton(
               onPressed: _titleController.text.trim().isEmpty
                 ? null
-                : () => Navigator.pop(context, true),
+                : () => Navigator.pop(dialogContext, true),
               child: const Text('ADD'),
             ),
           ],
@@ -260,7 +260,7 @@ class _ChapterPageState extends State<ChapterPage> {
       ),
     );
 
-    if (result == true) {
+    if (result == true && mounted) {
       final event = Event(
         title: _titleController.text,
         description: _descriptionController.text,
@@ -269,9 +269,8 @@ class _ChapterPageState extends State<ChapterPage> {
         color: Colors.blue,
       );
 
-      final provider = context.read<CalendarProvider>();
-      provider.addChapterEvent(_selectedDay, event);
-      setState(() {}); // Refresh the UI
+      // Use the provider from the widget's context, not the dialog context
+      Provider.of<CalendarProvider>(context, listen: false).addChapterEvent(_selectedDay, event);
     }
   }
 
