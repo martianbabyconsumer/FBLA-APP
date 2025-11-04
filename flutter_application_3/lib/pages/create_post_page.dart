@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../repository/post_repository.dart';
 import '../providers/user_provider.dart';
+import '../providers/auth_service.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -46,8 +47,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 return;
               }
 
-              // Get the current user's display name from UserProvider
+              // Get the current user's display name and userId from providers
               final userProvider = context.read<UserProvider>();
+              final authService = context.read<AuthService>();
 
               final newPost = Post(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -56,6 +58,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 dateLabel: '${DateTime.now().month}/${DateTime.now().day}',
                 title: _titleController.text.trim(),
                 body: _bodyController.text.trim(),
+                userId: authService.user?.uid, // Store Firebase user ID
                 // Prefer picked image path if available, otherwise use typed URL
                 imageUrl: _pickedImage != null
                     ? _pickedImage!.path

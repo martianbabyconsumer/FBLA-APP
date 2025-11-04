@@ -4,8 +4,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
 import '../repository/post_repository.dart';
 import '../providers/user_provider.dart';
+import '../providers/user_info_service.dart';
 
-class PostCard extends StatelessWidget {
+class PostCard extends StatefulWidget {
   const PostCard({
     super.key,
     required this.post,
@@ -20,9 +21,40 @@ class PostCard extends StatelessWidget {
   final ValueChanged<String> onMenuSelected;
 
   @override
+  State<PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<PostCard> {
+  String? _displayName;
+  String? _username;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final userInfoService = context.read<UserInfoService>();
+    final info = await userInfoService.getUserInfo(widget.post.userId);
+    if (mounted) {
+      setState(() {
+        _displayName = info.displayName;
+        _username = info.username;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final userProvider = context.watch<UserProvider>();
+    final userInfoService = context.watch<UserInfoService>();
+    
+    // Use fetched names if available, otherwise fallback to stored values
+    final displayName = _displayName ?? widget.post.displayName;
+    final handle = _username ?? widget.post.handle;
+    final isCurrentUser = userInfoService.isCurrentUser(widget.post.userId);
 
     return Container(
       decoration: BoxDecoration(
@@ -54,10 +86,7 @@ class PostCard extends StatelessWidget {
                 // Use the watched UserProvider above so this updates when the user
                 // changes their profile image or username in settings.
                 Builder(builder: (context) {
-                  final userHandle = (userProvider.username != null && userProvider.username!.isNotEmpty)
-                      ? '@${userProvider.username}'
-                      : '@you';
-                  if (!kIsWeb && post.handle == userHandle && userProvider.profileImagePath != null) {
+                  if (!kIsWeb && isCurrentUser && userProvider.profileImagePath != null) {
                     return ClipOval(
                       child: Image.file(
                         File(userProvider.profileImagePath!),
@@ -118,12 +147,12 @@ class PostCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            post.displayName,
+                            displayName,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            post.dateLabel,
+                            widget.post.dateLabel,
                             style: TextStyle(
                                 color: theme.colorScheme.onSurface
                                     .withAlpha((0.65 * 255).round())),
@@ -132,7 +161,7 @@ class PostCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        post.handle,
+                        handle,
                         style: TextStyle(
                             color: theme.colorScheme.onSurface
                                 .withAlpha((0.7 * 255).round())),
@@ -141,7 +170,7 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
                 PopupMenuButton<String>(
-                  onSelected: onMenuSelected,
+                  onSelected: widget.onMenuSelected,
                   itemBuilder: (context) => const [
                     PopupMenuItem(value: 'Report', child: Text('Report')),
                     PopupMenuItem(value: 'Share', child: Text('Share')),
@@ -151,16 +180,16 @@ class PostCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              post.title,
+              widget.post.title,
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(
-              post.body,
+              widget.post.body,
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 12),
-            if (post.imageUrl != null) ...[
+            if (widget.post.imageUrl != null) ...[
               SizedBox(
                 height: 200,
                 width: double.infinity,
@@ -168,9 +197,9 @@ class PostCard extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: post.imageUrl!.startsWith('http')
+                      child: widget.post.imageUrl!.startsWith('http')
                           ? Image.network(
-                              post.imageUrl!,
+                              widget.post.imageUrl!,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
@@ -183,7 +212,7 @@ class PostCard extends StatelessWidget {
                               ),
                             )
                           : Image.file(
-                              File(post.imageUrl!),
+                              File(widget.post.imageUrl!),
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
@@ -217,10 +246,10 @@ class PostCard extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  onPressed: onLike,
+                  onPressed: widget.onLike,
                   icon: Icon(
-                    post.liked ? Icons.favorite : Icons.favorite_border,
-                    color: post.liked
+                    widget.post.liked ? Icons.favorite : Icons.favorite_border,
+                    color: widget.post.liked
                         ? theme.colorScheme.primary
                         : (theme.brightness == Brightness.light
                             ? theme.colorScheme.onSurface
@@ -230,10 +259,10 @@ class PostCard extends StatelessWidget {
                   ),
                   splashRadius: 20,
                 ),
-                Text('${post.likes}'),
+                Text('${widget.post.likes}'),
                 const SizedBox(width: 16),
                 IconButton(
-                  onPressed: onComments,
+                  onPressed: widget.onComments,
                   icon: Icon(
                     Icons.mode_comment_outlined,
                     color: theme.brightness == Brightness.light
@@ -243,12 +272,12 @@ class PostCard extends StatelessWidget {
                             .withAlpha((0.85 * 255).round()),
                   ),
                 ),
-                Text('${post.comments.length}'),
+                Text('${widget.post.comments.length}'),
                 const Spacer(),
                 IconButton(
                   onPressed: () {
-                    final wasSaved = post.saved;
-                    context.read<PostRepository>().toggleSave(post.id);
+                    final wasSaved = widget.post.saved;
+                    context.read<PostRepository>().toggleSave(widget.post.id);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                           content:
@@ -256,8 +285,8 @@ class PostCard extends StatelessWidget {
                     );
                   },
                   icon: Icon(
-                    post.saved ? Icons.bookmark : Icons.bookmark_border,
-                    color: post.saved
+                    widget.post.saved ? Icons.bookmark : Icons.bookmark_border,
+                    color: widget.post.saved
                         ? theme.colorScheme.primary
                         : (theme.brightness == Brightness.light
                             ? theme.colorScheme.onSurface

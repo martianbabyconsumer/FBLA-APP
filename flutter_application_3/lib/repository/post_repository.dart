@@ -13,6 +13,7 @@ class Post {
     required this.title,
     required this.body,
     this.imageUrl,
+    this.userId, // Add userId to track post author
     int? likes,
     bool? liked,
     bool? saved,
@@ -30,6 +31,7 @@ class Post {
   final String title;
   final String body;
   final String? imageUrl;
+  final String? userId; // Firebase Auth UID of the post author
 
   int likes;
   bool liked;
@@ -43,6 +45,7 @@ class Post {
         title: title,
         body: body,
         imageUrl: imageUrl,
+        userId: userId,
         likes: likes,
         liked: liked,
         saved: saved,
@@ -56,6 +59,7 @@ class Comment {
     required this.authorName,
     required this.text,
     required this.dateLabel,
+    this.userId, // Add userId to track comment author
     List<Comment>? replies,
   }) : replies = replies ?? [];
 
@@ -63,6 +67,7 @@ class Comment {
   final String authorName;
   final String text;
   final String dateLabel;
+  final String? userId; // Firebase Auth UID of the comment author
   final List<Comment> replies;
 
   Comment copy() => Comment(
@@ -70,6 +75,7 @@ class Comment {
         authorName: authorName,
         text: text,
         dateLabel: dateLabel,
+        userId: userId,
         replies: List<Comment>.from(replies),
       );
 }

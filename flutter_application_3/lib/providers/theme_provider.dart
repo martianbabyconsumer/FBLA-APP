@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 class ThemeProvider with ChangeNotifier {
   static const String _themeKey = 'isDarkMode';
   static const String _themeColorKey = 'theme_color';
+  static const String _fontSizeKey = 'fontSize';
   bool _isDarkMode = false;
   SharedPreferences? _prefs;
   bool _isInitialized = false;
   String _selectedColor = 'Blue';
+  double _fontSize = 1.0;
 
   static const Map<String, MaterialColor> _colorMap = {
     'Blue': Colors.blue,
@@ -20,6 +22,7 @@ class ThemeProvider with ChangeNotifier {
 
   bool get isDarkMode => _isDarkMode;
   bool get isInitialized => _isInitialized;
+  double get fontSize => _fontSize;
 
   ThemeProvider();
 
@@ -29,6 +32,7 @@ class ThemeProvider with ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
     _isDarkMode = _prefs?.getBool(_themeKey) ?? false;
     _selectedColor = _prefs?.getString(_themeColorKey) ?? 'Blue';
+    _fontSize = _prefs?.getDouble(_fontSizeKey) ?? 1.0;
     _isInitialized = true;
     notifyListeners();
   }
@@ -50,6 +54,13 @@ class ThemeProvider with ChangeNotifier {
     if (!_colorMap.containsKey(name)) return;
     _selectedColor = name;
     await _prefs?.setString(_themeColorKey, _selectedColor);
+    notifyListeners();
+  }
+
+  Future<void> setFontSize(double size) async {
+    if (!_isInitialized) return;
+    _fontSize = size;
+    await _prefs?.setDouble(_fontSizeKey, _fontSize);
     notifyListeners();
   }
 

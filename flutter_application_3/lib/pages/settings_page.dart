@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/auth_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -16,7 +17,6 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final _displayNameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _usernameController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   XFile? _webImage; // For web platform
@@ -26,12 +26,23 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    // Load saved values from provider
+    // Load values from AuthService instead of UserProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authService = context.read<AuthService>();
       final userProvider = context.read<UserProvider>();
-      _displayNameController.text = userProvider.displayName;
-      _usernameController.text = userProvider.username ?? '';
-      _emailController.text = userProvider.email;
+      
+      // Get display name from Firebase Auth
+      _displayNameController.text = authService.displayName;
+      
+      // Try to load username from SharedPreferences (saved during signup)
+      SharedPreferences.getInstance().then((prefs) {
+        final username = prefs.getString('username') ?? '';
+        if (mounted) {
+          setState(() {
+            _usernameController.text = username;
+          });
+        }
+      });
 
       // For web, load the saved profile image path as _webImage if it exists
       if (kIsWeb && userProvider.profileImagePath != null) {
@@ -48,7 +59,6 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _displayNameController.dispose();
     _usernameController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -121,6 +131,15 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _setFontSize(double value) async {
+    final themeProvider = context.read<ThemeProvider>();
+    await themeProvider.setFontSize(value);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Font size updated to ${(value * 100).round()}%')),
+    );
+  }
+
   Widget _buildProfileImage(UserProvider userProvider) {
     // For web, show the picked image or FBLA logo
     if (kIsWeb) {
@@ -179,34 +198,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _saveSettings() async {
-    final userProvider = context.read<UserProvider>();
-
-    try {
-      // Save both values at once
-      await userProvider.saveSettings(
-        _displayNameController.text,
-        _emailController.text,
-        username: _usernameController.text.trim().isEmpty ? null : _usernameController.text.trim(),
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Settings saved')),
-        );
-      }
-    } on FormatException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _clearProfileImage() async {
     final userProvider = context.read<UserProvider>();
     await userProvider.updateProfileImage(null);
@@ -219,30 +210,86 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _resetToDefaults() async {
-    final userProvider = context.read<UserProvider>();
-    final themeProvider = context.read<ThemeProvider>();
+  Future<void> _saveSettings() async {
+    final authService = context.read<AuthService>();
+    
     try {
-      await userProvider.updateDisplayName('John Doe');
-      await userProvider.updateEmail('john.doe@example.com');
-      await userProvider.updateProfileImage(null);
-      // Reset theme color and ensure light mode
-      await themeProvider.setColor('Blue');
-      if (themeProvider.isDarkMode) await themeProvider.toggleTheme();
-      // Reset local prefs
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('enableNotifications');
-      await prefs.remove('showImagesInFeed');
-      await _loadLocalSettings();
+      // Update Firebase display name if changed
+      if (_displayNameController.text.trim().isNotEmpty &&
+          _displayNameController.text.trim() != authService.displayName) {
+        await authService.user?.updateDisplayName(_displayNameController.text.trim());
+        await authService.refreshUser();
+      }
+
+      // Save username to SharedPreferences
+      if (_usernameController.text.trim().isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('username', _usernameController.text.trim());
+        // Also update the mapping from username to email for login
+        await prefs.setString('username:${_usernameController.text.trim()}', authService.email);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Settings reset to defaults')));
+          const SnackBar(content: Text('Settings saved successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save settings: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _resetProfileFields() async {
+    final authService = context.read<AuthService>();
+    
+    try {
+      // Reset display name to default
+      await authService.user?.updateDisplayName('User');
+      await authService.user?.reload();
+      
+      // Clear username
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('username');
+
+      // Reload controllers
+      _displayNameController.text = authService.displayName;
+      _usernameController.text = '';
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile fields reset to defaults')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Failed to reset: $e')));
+      }
+    }
+  }
+
+  Future<void> _resetTheme() async {
+    final themeProvider = context.read<ThemeProvider>();
+    
+    try {
+      // Reset theme color to Blue and ensure light mode
+      await themeProvider.setColor('Blue');
+      if (themeProvider.isDarkMode) await themeProvider.toggleTheme();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Theme reset to default (Light, Blue)')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to reset theme: $e')));
       }
     }
   }
@@ -253,15 +300,9 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(
         // Intentionally remove the visible title per user request
         title: const SizedBox.shrink(),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveSettings,
-          ),
-        ],
       ),
-      body: Consumer<UserProvider>(
-        builder: (context, userProvider, _) {
+      body: Consumer2<UserProvider, AuthService>(
+        builder: (context, userProvider, authService, _) {
           return ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
@@ -282,12 +323,12 @@ class _SettingsPageState extends State<SettingsPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(userProvider.displayName,
+                                Text(authService.displayName,
                                     style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 4),
-                                Text(userProvider.email,
+                                Text(authService.email,
                                     style: TextStyle(
                                         color: Theme.of(context)
                                             .colorScheme
@@ -311,7 +352,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 8),
                       const Divider(),
                       const SizedBox(height: 8),
-                      // Display name and email fields
+                      // Display name field (editable)
                       TextField(
                         controller: _displayNameController,
                         decoration: const InputDecoration(
@@ -319,16 +360,6 @@ class _SettingsPageState extends State<SettingsPage> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.person),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.email),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -348,7 +379,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               label: const Text('Save')),
                           const SizedBox(width: 8),
                           OutlinedButton.icon(
-                              onPressed: _resetToDefaults,
+                              onPressed: _resetProfileFields,
                               icon: const Icon(Icons.refresh),
                               label: const Text('Reset')),
                         ],
@@ -422,6 +453,37 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      // Font Size Slider
+                      const Text('Font Size',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, child) {
+                          return Row(
+                            children: [
+                              const Text('A', style: TextStyle(fontSize: 12)),
+                              Expanded(
+                                child: Slider(
+                                  value: themeProvider.fontSize,
+                                  min: 0.8,
+                                  max: 1.4,
+                                  divisions: 6,
+                                  label: '${(themeProvider.fontSize * 100).round()}%',
+                                  onChanged: (value) => _setFontSize(value),
+                                ),
+                              ),
+                              const Text('A', style: TextStyle(fontSize: 20)),
+                              const SizedBox(width: 8),
+                              Text('${(themeProvider.fontSize * 100).round()}%',
+                                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -512,6 +574,12 @@ class _SettingsPageState extends State<SettingsPage> {
                           );
                         },
                       ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _resetTheme,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reset Theme to Default'),
+                      ),
                     ],
                   ),
                 ),
@@ -544,13 +612,39 @@ class _SettingsPageState extends State<SettingsPage> {
                           color: Theme.of(context).colorScheme.error),
                       title: const Text('Logout'),
                       textColor: Theme.of(context).colorScheme.error,
-                      onTap: () {
-                        // Implement logout: clear user data and navigate back to a login flow if present
-                        userProvider.updateProfileImage(null);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Logged out (local state only)')));
+                      onTap: () async {
+                        // Show confirmation dialog
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text('Confirm Logout'),
+                              content: const Text('Are you sure you want to logout?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Theme.of(context).colorScheme.error,
+                                  ),
+                                  child: const Text('Logout'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        // Only logout if confirmed
+                        if (confirmed == true) {
+                          await authService.signOut();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Logged out successfully')));
+                          }
+                        }
                       },
                     ),
                   ],

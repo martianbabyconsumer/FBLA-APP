@@ -154,6 +154,13 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  // Refresh user data and notify listeners
+  Future<void> refreshUser() async {
+    await _user?.reload();
+    _user = _auth.currentUser;
+    notifyListeners();
+  }
+
   // Get current user display name
   String get displayName => _user?.displayName ?? 'User';
 

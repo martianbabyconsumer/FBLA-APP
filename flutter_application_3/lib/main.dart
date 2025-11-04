@@ -7,6 +7,7 @@ import 'providers/notification_service.dart';
 import 'providers/calendar_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/auth_service.dart';
+import 'providers/user_info_service.dart';
 import 'repository/post_repository.dart';
 import 'widgets/app_scaffold.dart';
 import 'pages/login_page.dart';
@@ -35,6 +36,10 @@ Future<void> main() async {
           create: (_) => NotificationService(_scaffoldMessengerKey)),
       // NotificationService depends on the scaffold messenger key below; we'll provide it using a ProxyProvider in the widget tree.
       ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+      // UserInfoService needs AuthService
+      ProxyProvider<AuthService, UserInfoService>(
+        update: (context, authService, previous) => UserInfoService(authService),
+      ),
       ChangeNotifierProvider<PostRepository>.value(value: postRepo),
       ChangeNotifierProvider<CalendarProvider>(
           create: (_) => CalendarProvider()),
@@ -49,11 +54,22 @@ class FBLAApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    
     return MaterialApp(
       title: 'FBLA CONNECT',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _scaffoldMessengerKey,
-      theme: context.watch<ThemeProvider>().currentTheme,
+      theme: themeProvider.currentTheme,
+      builder: (context, child) {
+        // Apply text scaling using MediaQuery
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: themeProvider.fontSize,
+          ),
+          child: child!,
+        );
+      },
       home: Consumer<AuthService>(
         builder: (context, authService, child) {
           if (!authService.isAuthenticated) return const LoginPage();
