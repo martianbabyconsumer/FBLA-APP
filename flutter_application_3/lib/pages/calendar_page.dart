@@ -179,9 +179,9 @@ class _CalendarPageState extends State<CalendarPage>
                           // Validate title length
                           if (title.length > 100) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Event title must be 100 characters or less'),
-                                backgroundColor: Colors.red,
+                              SnackBar(
+                                content: const Text('Event title must be 100 characters or less'),
+                                backgroundColor: Theme.of(context).colorScheme.error,
                               ),
                             );
                             return;
@@ -207,9 +207,9 @@ class _CalendarPageState extends State<CalendarPage>
                             
                             if (!endDateTime.isAfter(startDateTime)) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('End time must be after start time'),
-                                  backgroundColor: Colors.red,
+                                SnackBar(
+                                  content: const Text('End time must be after start time'),
+                                  backgroundColor: Theme.of(context).colorScheme.error,
                                 ),
                               );
                               return;
@@ -221,7 +221,7 @@ class _CalendarPageState extends State<CalendarPage>
                             description: desc,
                             startTime: startTime,
                             endTime: endTime,
-                            color: isPersonal ? Colors.blue : Colors.orange,
+                            color: isPersonal ? Theme.of(context).primaryColor : Theme.of(context).colorScheme.secondary,
                           );
                           if (isPersonal) {
                             provider.addPersonalEvent(selectedDay, event);
@@ -310,7 +310,7 @@ class _CalendarView extends StatelessWidget {
                   child: Text(
                     'No events for this day',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                       fontSize: 16,
                     ),
                   ),
@@ -322,10 +322,10 @@ class _CalendarView extends StatelessWidget {
                     return Dismissible(
                       key: Key('$isPersonal-${event.title}-$index'),
                       background: Container(
-                        color: Colors.red,
+                        color: Theme.of(context).colorScheme.error,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 16),
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
                       ),
                       direction: DismissDirection.endToStart,
                       onDismissed: (_) {

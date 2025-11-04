@@ -43,7 +43,7 @@ class _SignUpPageState extends State<SignUpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     } else {
@@ -74,14 +74,14 @@ class _SignUpPageState extends State<SignUpPage> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: theme.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
                       'FBLA',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
@@ -101,7 +101,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 Text(
                   'Sign up to get started',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
+                    color: theme.hintColor,
                   ),
                   textAlign: TextAlign.center,
                 ),

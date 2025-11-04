@@ -13,11 +13,13 @@ class CreatePostPage extends StatefulWidget {
 class _CreatePostPageState extends State<CreatePostPage> {
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
+  final _imageController = TextEditingController();
 
   @override
   void dispose() {
     _titleController.dispose();
     _bodyController.dispose();
+    _imageController.dispose();
     super.dispose();
   }
 
@@ -48,6 +50,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 dateLabel: '${DateTime.now().month}/${DateTime.now().day}',
                 title: _titleController.text.trim(),
                 body: _bodyController.text.trim(),
+                imageUrl: _imageController.text.trim().isEmpty ? null : _imageController.text.trim(),
                 comments: [],
               );
               
@@ -73,6 +76,27 @@ class _CreatePostPageState extends State<CreatePostPage> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
+            // Optional image URL
+            TextField(
+              controller: _imageController,
+              decoration: const InputDecoration(
+                hintText: 'Image URL (optional)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.link),
+              ),
+              keyboardType: TextInputType.url,
+            ),
+            const SizedBox(height: 12),
+            if (_imageController.text.trim().isNotEmpty)
+              SizedBox(
+                height: 160,
+                child: Image.network(
+                  _imageController.text.trim(),
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => const Center(child: Text('Invalid image URL')),
+                ),
+              ),
+            const SizedBox(height: 12),
             Expanded(
               child: TextField(
                 controller: _bodyController,

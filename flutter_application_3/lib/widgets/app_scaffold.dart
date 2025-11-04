@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../pages/settings_page.dart';
 import '../pages/chapter_page.dart';
 import '../pages/calendar_page.dart';
-import '../pages/favorites_page.dart';
+import '../pages/activity_page.dart';
 import '../pages/home_feed_page.dart';
 
 class AppScaffold extends StatefulWidget {
@@ -31,8 +31,6 @@ class _AppScaffoldState extends State<AppScaffold> {
         return const HomeFeedPage();
       case 3:
         return const CalendarPage();
-      case 4:
-        return const FavoritesPage();
       default:
         return const Center(child: Text('Page not found'));
     }
@@ -40,12 +38,11 @@ class _AppScaffoldState extends State<AppScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+  final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
         centerTitle: true,
         title: Row(
@@ -54,7 +51,7 @@ class _AppScaffoldState extends State<AppScaffold> {
             Text(
               'FBLA',
               style: TextStyle(
-                color: Colors.blue,
+                color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
                 fontFamily: 'Roboto',
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -65,7 +62,7 @@ class _AppScaffoldState extends State<AppScaffold> {
             Text(
               'CONNECT',
               style: TextStyle(
-                color: Color(0xFFFFD700), // gold
+                color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
                 fontFamily: 'Roboto',
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -74,14 +71,25 @@ class _AppScaffoldState extends State<AppScaffold> {
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActivityPage()));
+              },
+              child: const CircleAvatar(child: Icon(Icons.person)),
+            ),
+          )
+        ],
       ),
       body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onNavigationItemTapped,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor ?? (theme.brightness == Brightness.dark ? Colors.white : theme.colorScheme.primary),
+        unselectedItemColor: theme.bottomNavigationBarTheme.unselectedItemColor ?? theme.unselectedWidgetColor,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
@@ -98,10 +106,6 @@ class _AppScaffoldState extends State<AppScaffold> {
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
             label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border),
-            label: 'Favorites',
           ),
         ],
       ),

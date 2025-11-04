@@ -76,7 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to pick image: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -118,18 +118,19 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildFBLALogo(double size) {
+    final theme = Theme.of(context);
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.blue,
+        color: theme.primaryColor,
         shape: BoxShape.circle,
       ),
       child: Center(
         child: Text(
           'FBLA',
           style: TextStyle(
-            color: Colors.white,
+            color: theme.colorScheme.onPrimary,
             fontSize: size / 6,
             fontWeight: FontWeight.bold,
           ),
@@ -192,12 +193,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: CircleAvatar(
+                        child: CircleAvatar(
                         backgroundColor: Theme.of(context).primaryColor,
                         radius: 18,
                         child: IconButton(
                           icon: const Icon(Icons.camera_alt, size: 18),
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           onPressed: _pickImage,
                         ),
                       ),
@@ -257,6 +258,26 @@ class _SettingsPageState extends State<SettingsPage> {
                           );
                         },
                       ),
+                      const SizedBox(height: 12),
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, child) {
+                          return Row(
+                            children: [
+                              const Text('Theme color:'),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: themeProvider.selectedColorName,
+                                  items: themeProvider.availableColors.map((name) => DropdownMenuItem(value: name, child: Text(name))).toList(),
+                                  onChanged: (s) {
+                                    if (s != null) themeProvider.setColor(s);
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -278,9 +299,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const Divider(),
                     ListTile(
-                      leading: const Icon(Icons.logout, color: Colors.red),
+                      leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
                       title: const Text('Logout'),
-                      textColor: Colors.red,
+                      textColor: Theme.of(context).colorScheme.error,
                       onTap: () {
                         // TODO: Implement logout
                       },

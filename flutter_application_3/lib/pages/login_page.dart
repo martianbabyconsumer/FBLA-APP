@@ -38,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -65,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -90,14 +90,14 @@ class _LoginPageState extends State<LoginPage> {
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: theme.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
                       'FBLA',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
@@ -117,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                 Text(
                   'Sign in to continue',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
+                    color: theme.hintColor,
                   ),
                   textAlign: TextAlign.center,
                 ),

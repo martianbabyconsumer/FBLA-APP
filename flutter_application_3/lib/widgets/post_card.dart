@@ -28,9 +28,13 @@ class PostCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.brightness == Brightness.light ? theme.colorScheme.primary : theme.dividerColor,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withAlpha(102) : Colors.black.withAlpha(13),
+            color: theme.shadowColor.withOpacity(0.06),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -58,23 +62,23 @@ class PostCard extends StatelessWidget {
                           errorBuilder: (context, error, stackTrace) {
                             // If image fails to load, show FBLA logo
                             return Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'FBLA',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            );
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            'FBLA',
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
                           },
                         ),
                       );
@@ -84,14 +88,14 @@ class PostCard extends StatelessWidget {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.blue,
+                          color: theme.primaryColor,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: Text(
                             'FBLA',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: theme.colorScheme.onPrimary,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -131,7 +135,6 @@ class PostCard extends StatelessWidget {
                   onSelected: onMenuSelected,
                   itemBuilder: (context) => const [
                     PopupMenuItem(value: 'Report', child: Text('Report')),
-                    PopupMenuItem(value: 'Save', child: Text('Save')),
                     PopupMenuItem(value: 'Share', child: Text('Share')),
                   ],
                 ),
@@ -175,7 +178,7 @@ class PostCard extends StatelessWidget {
                         height: 80,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.red, width: 4),
+                          border: Border.all(color: theme.colorScheme.secondary, width: 4),
                         ),
                       ),
                     ),
@@ -188,9 +191,9 @@ class PostCard extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: onLike,
-                  icon: Icon(
+                    icon: Icon(
                     post.liked ? Icons.favorite : Icons.favorite_border,
-                    color: post.liked ? Colors.pink : null,
+                    color: post.liked ? theme.colorScheme.secondary : null,
                   ),
                 ),
                 Text('${post.likes}'),
@@ -201,6 +204,16 @@ class PostCard extends StatelessWidget {
                 ),
                 Text('${post.comments.length}'),
                 const Spacer(),
+                IconButton(
+                  onPressed: () {
+                    final wasSaved = post.saved;
+                    context.read<PostRepository>().toggleSave(post.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(wasSaved ? 'Removed from saved' : 'Saved')),
+                    );
+                  },
+                  icon: Icon(post.saved ? Icons.bookmark : Icons.bookmark_border),
+                ),
                 IconButton(
                   onPressed: () {},
                   icon: const Icon(Icons.share),

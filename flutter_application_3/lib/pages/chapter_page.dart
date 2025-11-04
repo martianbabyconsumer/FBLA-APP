@@ -255,9 +255,9 @@ class _ChapterPageState extends State<ChapterPage> {
                     // Validate title length
                     if (title.length > 100) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Event title must be 100 characters or less'),
-                          backgroundColor: Colors.red,
+                        SnackBar(
+                          content: const Text('Event title must be 100 characters or less'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
                         ),
                       );
                       return;
@@ -283,9 +283,9 @@ class _ChapterPageState extends State<ChapterPage> {
                       
                       if (!endDateTime.isAfter(startDateTime)) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('End time must be after start time'),
-                            backgroundColor: Colors.red,
+                          SnackBar(
+                            content: const Text('End time must be after start time'),
+                            backgroundColor: Theme.of(context).colorScheme.error,
                           ),
                         );
                         return;
@@ -331,13 +331,13 @@ class _ChapterPageState extends State<ChapterPage> {
                   color: theme.primaryColor,
                   child: Row(
                     children: [
-                      const Icon(Icons.school, color: Colors.white),
+                      Icon(Icons.school, color: theme.colorScheme.onPrimary),
                       const SizedBox(width: 8),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'FBLA Chapter',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: theme.colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -396,9 +396,13 @@ class _ChapterPageState extends State<ChapterPage> {
                   ),
                   decoration: BoxDecoration(
                     color: theme.scaffoldBackgroundColor,
+                    border: Border.all(
+                      color: theme.brightness == Brightness.light ? theme.colorScheme.primary : theme.dividerColor,
+                      width: 1,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: theme.shadowColor.withOpacity(0.08),
                         blurRadius: 4,
                       ),
                     ],
@@ -439,9 +443,13 @@ class _ChapterPageState extends State<ChapterPage> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.scaffoldBackgroundColor,
+                      border: Border.all(
+                        color: theme.brightness == Brightness.light ? theme.colorScheme.primary : theme.dividerColor,
+                        width: 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: theme.shadowColor.withOpacity(0.08),
                           blurRadius: 4,
                           offset: const Offset(0, -2),
                         ),
@@ -466,10 +474,8 @@ class _ChapterPageState extends State<ChapterPage> {
                                 borderRadius: BorderRadius.circular(24),
                                 borderSide: BorderSide.none,
                               ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? Colors.grey[800]
-                                  : Colors.grey[200],
+                filled: true,
+                fillColor: isDark ? theme.cardColor : theme.cardColor,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
@@ -660,7 +666,7 @@ class _ChapterPageState extends State<ChapterPage> {
                     backgroundColor: theme.primaryColor,
                     child: Text(
                       message.authorName[0],
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
                   ),
                   const SizedBox(width: 8),

@@ -12,7 +12,7 @@ import 'widgets/app_scaffold.dart';
 import 'pages/settings_page.dart';
 import 'pages/chapter_page.dart';
 import 'pages/calendar_page.dart';
-import 'pages/favorites_page.dart';
+import 'pages/activity_page.dart';
 import 'pages/login_page.dart';
 
 Future<void> main() async {
@@ -27,26 +27,25 @@ Future<void> main() async {
   final themeProvider = ThemeProvider();
   await themeProvider.initialize();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: themeProvider),
-        ChangeNotifierProvider<AuthService>(
-          create: (_) => AuthService(),
-        ),
-        ChangeNotifierProvider<PostRepository>(
-          create: (_) => InMemoryPostRepository(),
-        ),
-        ChangeNotifierProvider<CalendarProvider>(
-          create: (_) => CalendarProvider(),
-        ),
-        ChangeNotifierProvider<UserProvider>(
-          create: (_) => UserProvider(),
-        ),
-      ],
-      child: const FBLAApp(),
-    ),
-  );
+  final postRepo = InMemoryPostRepository();
+  await postRepo.initialize();
+
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: themeProvider),
+      ChangeNotifierProvider<AuthService>(
+        create: (_) => AuthService(),
+      ),
+      ChangeNotifierProvider<PostRepository>.value(value: postRepo),
+      ChangeNotifierProvider<CalendarProvider>(
+        create: (_) => CalendarProvider(),
+      ),
+      ChangeNotifierProvider<UserProvider>(
+        create: (_) => UserProvider(),
+      ),
+    ],
+    child: const FBLAApp(),
+  ));
 }
 
 class FBLAApp extends StatelessWidget {
@@ -206,6 +205,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onMenuSelected(String value, String postId) {
+    if (value == 'Save') {
+      // toggle saved state via repository
+      final repo = context.read<PostRepository>();
+      repo.toggleSave(postId);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved post')));
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$value on post $postId')),
     );
@@ -247,8 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       case 3:
         return const CalendarPage();
-      case 4:
-        return const FavoritesPage();
+      // case 4 (Favorites) removed — Favorites moved to Activity accessible from top-right
       default:
         return const Center(child: Text('Page not found'));
     }
@@ -261,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
         centerTitle: true,
         title: Row(
@@ -270,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               'FBLA',
               style: TextStyle(
-                color: Colors.blue,
+                color: theme.primaryColor,
                 fontFamily: 'Roboto',
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -281,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               'CONNECT',
               style: TextStyle(
-                color: Color(0xFFFFD700), // gold
+                color: theme.colorScheme.secondary,
                 fontFamily: 'Roboto',
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -290,6 +295,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: InkWell(
+              onTap: () {
+                // open Activity page
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActivityPage()));
+              },
+              child: const CircleAvatar(child: Icon(Icons.person)),
+            ),
+          )
+        ],
         bottom: _selectedIndex == 2 ? PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Container(
@@ -334,8 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         onTap: _onNavigationItemTapped,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: theme.primaryColor,
+        unselectedItemColor: theme.unselectedWidgetColor,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
@@ -352,10 +369,6 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
             label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border),
-            label: 'Favorites',
           ),
         ],
       ),
@@ -441,9 +454,8 @@ class PostCard extends StatelessWidget {
                PopupMenuButton<String>(
                  onSelected: onMenuSelected,
                  itemBuilder: (context) => const [
-                   PopupMenuItem(value: 'Report', child: Text('Report')),
-                   PopupMenuItem(value: 'Save', child: Text('Save')),
-                   PopupMenuItem(value: 'Share', child: Text('Share')),
+                       PopupMenuItem(value: 'Report', child: Text('Report')),
+                       PopupMenuItem(value: 'Share', child: Text('Share')),
                  ],
                ),
               ],
@@ -659,14 +671,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: theme.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
                       'FBLA',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
