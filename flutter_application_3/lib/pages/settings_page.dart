@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
 import '../providers/theme_provider.dart';
+import '../providers/user_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -12,14 +16,25 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _displayNameController = TextEditingController();
   final _emailController = TextEditingController();
-  String? _profileImageUrl;
+  final ImagePicker _picker = ImagePicker();
+  XFile? _webImage; // For web platform
 
   @override
   void initState() {
     super.initState();
-    // TODO: Load actual user data
-    _displayNameController.text = 'John Doe';
-    _emailController.text = 'john.doe@example.com';
+    // Load saved values from provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = context.read<UserProvider>();
+      _displayNameController.text = userProvider.displayName;
+      _emailController.text = userProvider.email;
+      
+      // For web, load the saved profile image path as _webImage if it exists
+      if (kIsWeb && userProvider.profileImagePath != null) {
+        setState(() {
+          _webImage = XFile(userProvider.profileImagePath!);
+        });
+      }
+    });
   }
 
   @override
@@ -30,17 +45,124 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _pickImage() async {
-    // TODO: Implement image picker
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Image picker to be implemented')),
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      
+      if (image != null && mounted) {
+        final userProvider = context.read<UserProvider>();
+        
+        if (kIsWeb) {
+          // For web, store the XFile and save its path to provider
+          setState(() {
+            _webImage = image;
+          });
+          await userProvider.updateProfileImage(image.path);
+        } else {
+          // For mobile, store the path directly
+          await userProvider.updateProfileImage(image.path);
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildProfileImage(UserProvider userProvider) {
+    // For web, show the picked image or FBLA logo
+    if (kIsWeb) {
+      if (_webImage != null) {
+        return Image.network(
+          _webImage!.path,
+          width: 100,
+          height: 100,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildFBLALogo(100);
+          },
+        );
+      } else {
+        return _buildFBLALogo(100);
+      }
+    } else {
+      // For mobile, use file path from provider
+      if (userProvider.profileImagePath != null) {
+        return Image.file(
+          File(userProvider.profileImagePath!),
+          width: 100,
+          height: 100,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildFBLALogo(100);
+          },
+        );
+      } else {
+        return _buildFBLALogo(100);
+      }
+    }
+  }
+
+  Widget _buildFBLALogo(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.blue,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          'FBLA',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: size / 6,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 
-  void _saveSettings() {
-    // TODO: Implement settings save
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings saved')),
-    );
+  Future<void> _saveSettings() async {
+    final userProvider = context.read<UserProvider>();
+    
+    try {
+      // Save both values at once
+      await userProvider.saveSettings(
+        _displayNameController.text,
+        _emailController.text,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings saved')),
+        );
+      }
+    } on FormatException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -55,122 +177,120 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // Profile Picture Section
-          Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _profileImageUrl != null
-                      ? NetworkImage(_profileImageUrl!)
-                      : null,
-                  child: _profileImageUrl == null
-                      ? const Icon(Icons.person, size: 50)
-                      : null,
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    radius: 18,
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt, size: 18),
-                      color: Colors.white,
-                      onPressed: _pickImage,
+      body: Consumer<UserProvider>(
+        builder: (context, userProvider, _) {
+          return ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              // Profile Picture Section
+              Center(
+                child: Stack(
+                  children: [
+                    ClipOval(
+                      child: _buildProfileImage(userProvider),
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Display Name Field
-          TextField(
-            controller: _displayNameController,
-            decoration: const InputDecoration(
-              labelText: 'Display Name',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.person),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Email Field
-          TextField(
-            controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.email),
-            ),
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 24),
-
-          // Theme Section
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Theme',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        radius: 18,
+                        child: IconButton(
+                          icon: const Icon(Icons.camera_alt, size: 18),
+                          color: Colors.white,
+                          onPressed: _pickImage,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Consumer<ThemeProvider>(
-                    builder: (context, themeProvider, child) {
-                      return SwitchListTile(
-                        title: const Text('Dark Mode'),
-                        subtitle: Text(themeProvider.isDarkMode ? 'On' : 'Off'),
-                        value: themeProvider.isDarkMode,
-                        onChanged: (bool value) {
-                          themeProvider.toggleTheme();
-                        },
-                      );
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
+              const SizedBox(height: 24),
 
-          const SizedBox(height: 24),
-          
-          // Account Actions
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.security),
-                  title: const Text('Change Password'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // TODO: Implement password change
-                  },
+              // Display Name Field
+              TextField(
+                controller: _displayNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Display Name',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
                 ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Logout'),
-                  textColor: Colors.red,
-                  onTap: () {
-                    // TODO: Implement logout
-                  },
+              ),
+              const SizedBox(height: 16),
+
+              // Email Field
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email),
                 ),
-              ],
-            ),
-          ),
-        ],
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 24),
+
+              // Theme Section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Theme',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, child) {
+                          return SwitchListTile(
+                            title: const Text('Dark Mode'),
+                            subtitle: Text(themeProvider.isDarkMode ? 'On' : 'Off'),
+                            value: themeProvider.isDarkMode,
+                            onChanged: (bool value) {
+                              themeProvider.toggleTheme();
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              
+              // Account Actions
+              Card(
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.security),
+                      title: const Text('Change Password'),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () {
+                        // TODO: Implement password change
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: const Text('Logout'),
+                      textColor: Colors.red,
+                      onTap: () {
+                        // TODO: Implement logout
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../repository/post_repository.dart';
+import '../providers/user_provider.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -36,10 +38,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 return;
               }
               
+              // Get the current user's display name from UserProvider
+              final userProvider = context.read<UserProvider>();
+              
               final newPost = Post(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
                 handle: '@you',
-                displayName: 'You',
+                displayName: userProvider.displayName,
                 dateLabel: '${DateTime.now().month}/${DateTime.now().day}',
                 title: _titleController.text.trim(),
                 body: _bodyController.text.trim(),

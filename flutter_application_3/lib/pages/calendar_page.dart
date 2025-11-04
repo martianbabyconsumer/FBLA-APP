@@ -173,9 +173,52 @@ class _CalendarPageState extends State<CalendarPage>
                 TextButton(
                   onPressed: canAdd
                       ? () {
+                          final title = titleController.text.trim();
+                          final desc = descController.text.trim();
+                          
+                          // Validate title length
+                          if (title.length > 100) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Event title must be 100 characters or less'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          // Validate that end time is after start time
+                          if (startTime != null && endTime != null) {
+                            final now = DateTime.now();
+                            final startDateTime = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                              startTime!.hour,
+                              startTime!.minute,
+                            );
+                            final endDateTime = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                              endTime!.hour,
+                              endTime!.minute,
+                            );
+                            
+                            if (!endDateTime.isAfter(startDateTime)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('End time must be after start time'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                          }
+                          
                           final event = Event(
-                            title: titleController.text.trim(),
-                            description: descController.text.trim(),
+                            title: title,
+                            description: desc,
                             startTime: startTime,
                             endTime: endTime,
                             color: isPersonal ? Colors.blue : Colors.orange,

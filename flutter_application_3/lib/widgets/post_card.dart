@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
 import '../repository/post_repository.dart';
+import '../providers/user_provider.dart';
 
 class PostCard extends StatelessWidget {
   const PostCard({
@@ -40,14 +44,62 @@ class PostCard extends StatelessWidget {
             // Top row: avatar, names, date, and three-dot menu
             Row(
               children: [
-                // Gray circular avatar
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[800] : Colors.grey[300],
-                    shape: BoxShape.circle,
-                  ),
+                // Profile picture - show custom image only for user's own posts
+                Consumer<UserProvider>(
+                  builder: (context, userProvider, _) {
+                    // Only show custom profile picture for user's own posts (@you) and on mobile
+                    if (!kIsWeb && post.handle == '@you' && userProvider.profileImagePath != null) {
+                      return ClipOval(
+                        child: Image.file(
+                          File(userProvider.profileImagePath!),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // If image fails to load, show FBLA logo
+                            return Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'FBLA',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    } else {
+                      // Show FBLA logo for all other posts or on web
+                      return Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            'FBLA',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(

@@ -1,17 +1,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 import 'providers/calendar_provider.dart';
+import 'providers/user_provider.dart';
+import 'providers/auth_service.dart';
 import 'repository/post_repository.dart';
 import 'widgets/app_scaffold.dart';
 import 'pages/settings_page.dart';
 import 'pages/chapter_page.dart';
 import 'pages/calendar_page.dart';
 import 'pages/favorites_page.dart';
+import 'pages/login_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Create and initialize providers
   final themeProvider = ThemeProvider();
@@ -21,11 +31,17 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider<AuthService>(
+          create: (_) => AuthService(),
+        ),
         ChangeNotifierProvider<PostRepository>(
           create: (_) => InMemoryPostRepository(),
         ),
         ChangeNotifierProvider<CalendarProvider>(
           create: (_) => CalendarProvider(),
+        ),
+        ChangeNotifierProvider<UserProvider>(
+          create: (_) => UserProvider(),
         ),
       ],
       child: const FBLAApp(),
@@ -41,7 +57,16 @@ class FBLAApp extends StatelessWidget {
     return MaterialApp(
       title: 'FBLA CONNECT',
       theme: context.watch<ThemeProvider>().currentTheme,
-      home: const AppScaffold(),
+      home: Consumer<AuthService>(
+        builder: (context, authService, child) {
+          // Show login page if not authenticated
+          if (!authService.isAuthenticated) {
+            return const LoginPage();
+          }
+          // Show main app if authenticated
+          return const AppScaffold();
+        },
+      ),
     );
   }
 }
@@ -630,7 +655,24 @@ class _PostDetailPageState extends State<PostDetailPage> {
           children: [
             Row(
               children: [
-                Container(width: 48, height: 48, decoration: BoxDecoration(color: isDark ? Colors.grey[800] : Colors.grey[300], shape: BoxShape.circle)),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      'FBLA',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(

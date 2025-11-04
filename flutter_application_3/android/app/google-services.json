@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "1022514662421",
-    "project_id": "fbla-app-ff13b",
-    "storage_bucket": "fbla-app-ff13b.firebasestorage.app"
+    "project_number": "351433578987",
+    "project_id": "fbla-app-72e34",
+    "storage_bucket": "fbla-app-72e34.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1022514662421:android:2349136a95dbf851e4d21c",
+        "mobilesdk_app_id": "1:351433578987:android:be9bf5d009b977a23ca1ae",
         "android_client_info": {
-          "package_name": "com.example.flutter_application_3"
+          "package_name": "com.android.application"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCII6TH6c2Unk4eaDU50PyyX7kTl1PPPZ8"
+          "current_key": "AIzaSyBSKjpal0pwKKn_1LdB76TZKmveul7l9h4"
         }
       ],
       "services": {

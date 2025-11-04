@@ -89,9 +89,8 @@ class InMemoryPostRepository extends PostRepository {
             dateLabel: 'Sep 11',
             title: 'My dog is pregnant',
             body:
-                'I found out today that my dog is pregnant. We\'re excited and a little nervous. Any tips for first-time dog parents? Here\'s a photo from the vet appointment.',
-            imageUrl:
-                'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=60',
+                'I found out today that my dog is pregnant. We\'re excited and a little nervous. Any tips for first-time dog parents?',
+            imageUrl: null,
             likes: 12,
             comments: [
               Comment(

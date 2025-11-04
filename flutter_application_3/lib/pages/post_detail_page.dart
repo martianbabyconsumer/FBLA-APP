@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
 import '../repository/post_repository.dart';
+import '../providers/user_provider.dart';
 
 class PostDetailPage extends StatefulWidget {
   const PostDetailPage({super.key, required this.post});
@@ -32,7 +35,29 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   void _addComment({Comment? parentComment}) {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    
+    // Validate comment is not empty
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Comment cannot be empty'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Validate minimum length (at least 1 non-space character already checked above)
+    // Validate maximum length
+    if (text.length > 500) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Comment must be 500 characters or less'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     
     final now = DateTime.now();
     final dateLabel = '${now.month}/${now.day}';
@@ -109,13 +134,62 @@ class _PostDetailPageState extends State<PostDetailPage> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey[800] : Colors.grey[300],
-                      shape: BoxShape.circle
-                    ),
+                  // Profile picture - show custom image only for user's own posts
+                  Consumer<UserProvider>(
+                    builder: (context, userProvider, _) {
+                      // Only show custom profile picture for user's own posts (@you) and on mobile
+                      if (!kIsWeb && _post.handle == '@you' && userProvider.profileImagePath != null) {
+                        return ClipOval(
+                          child: Image.file(
+                            File(userProvider.profileImagePath!),
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              // If image fails to load, show FBLA logo
+                              return Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'FBLA',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      } else {
+                        // Show FBLA logo for all other posts or on web
+                        return Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              'FBLA',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
                   const SizedBox(width: 10),
                   Expanded(
