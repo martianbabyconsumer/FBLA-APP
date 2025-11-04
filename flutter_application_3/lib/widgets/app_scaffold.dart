@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../pages/settings_page.dart';
 import '../pages/chapter_page.dart';
 import '../pages/calendar_page.dart';
 import '../pages/activity_page.dart';
+import '../pages/notifications_page.dart';
 import '../pages/home_feed_page.dart';
+// App scaffold - keep imports minimal
 
 class AppScaffold extends StatefulWidget {
   const AppScaffold({super.key});
@@ -14,6 +17,15 @@ class AppScaffold extends StatefulWidget {
 
 class _AppScaffoldState extends State<AppScaffold> {
   int _selectedIndex = 2; // Default to home tab
+
+  Future<bool> _loadNotificationsEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('enableNotifications') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
 
   void _onNavigationItemTapped(int index) {
     setState(() {
@@ -38,7 +50,7 @@ class _AppScaffoldState extends State<AppScaffold> {
 
   @override
   Widget build(BuildContext context) {
-  final theme = Theme.of(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -51,7 +63,8 @@ class _AppScaffoldState extends State<AppScaffold> {
             Text(
               'FBLA',
               style: TextStyle(
-                color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
+                color: theme.appBarTheme.foregroundColor ??
+                    theme.colorScheme.onPrimary,
                 fontFamily: 'Roboto',
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -62,7 +75,8 @@ class _AppScaffoldState extends State<AppScaffold> {
             Text(
               'CONNECT',
               style: TextStyle(
-                color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
+                color: theme.appBarTheme.foregroundColor ??
+                    theme.colorScheme.onPrimary,
                 fontFamily: 'Roboto',
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
@@ -72,42 +86,96 @@ class _AppScaffoldState extends State<AppScaffold> {
           ],
         ),
         actions: [
+          // Show notifications button only on home tab and when enabled in prefs
+          if (_selectedIndex == 2)
+            FutureBuilder<bool>(
+              future: _loadNotificationsEnabled(),
+              builder: (context, snap) {
+                final enabled = snap.data ?? false;
+                if (!enabled) return const SizedBox.shrink();
+                return IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  tooltip: 'Notifications',
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const NotificationsPage()));
+                  },
+                );
+              },
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: InkWell(
               onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActivityPage()));
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ActivityPage()));
               },
-              child: const CircleAvatar(child: Icon(Icons.person)),
+              child: CircleAvatar(
+                // White circular background with themed person icon inside
+                backgroundColor: Colors.white,
+                radius: 18,
+                child: Icon(
+                  Icons.person,
+                  color: theme.colorScheme.primary,
+                  size: 18,
+                ),
+              ),
             ),
           )
         ],
       ),
       body: _buildBody(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onNavigationItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor ?? (theme.brightness == Brightness.dark ? Colors.white : theme.colorScheme.primary),
-        unselectedItemColor: theme.bottomNavigationBarTheme.unselectedItemColor ?? theme.unselectedWidgetColor,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Your Chapter',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Calendar',
-          ),
-        ],
+      bottomNavigationBar: Builder(
+        builder: (ctx) {
+          final unselected = theme
+                  .bottomNavigationBarTheme.unselectedItemColor ??
+              (theme.brightness == Brightness.dark
+                  ? theme.colorScheme.onSurface.withAlpha((0.65 * 255).round())
+                  : theme.colorScheme.onSurface.withAlpha((0.7 * 255).round()));
+          return IconTheme(
+            data: IconThemeData(color: unselected),
+            child: BottomNavigationBar(
+              key: ValueKey(unselected),
+              currentIndex: _selectedIndex,
+              onTap: _onNavigationItemTapped,
+              type: BottomNavigationBarType.fixed,
+              // In dark mode prefer lighter (onSurface) tones for both selected and unselected icons
+              selectedItemColor:
+                  theme.bottomNavigationBarTheme.selectedItemColor ??
+                      (theme.brightness == Brightness.dark
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.primary),
+              unselectedItemColor: unselected,
+              selectedIconTheme: IconThemeData(
+                  color: theme.bottomNavigationBarTheme.selectedItemColor ??
+                      (theme.brightness == Brightness.dark
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.primary)),
+              unselectedIconTheme: IconThemeData(color: unselected),
+              backgroundColor: theme.scaffoldBackgroundColor,
+              showSelectedLabels: true,
+              showUnselectedLabels: true,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.settings),
+                  label: 'Settings',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.chat_bubble_outline),
+                  label: 'Your Chapter',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.calendar_today),
+                  label: 'Calendar',
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

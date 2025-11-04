@@ -34,14 +34,32 @@ class _CalendarPageState extends State<CalendarPage>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.person), text: 'Personal'),
-            Tab(icon: Icon(Icons.group), text: 'Chapter'),
-          ],
+        // Make the TabBar background and selected tab style match the app theme
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: theme.scaffoldBackgroundColor,
+            child: TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(icon: Icon(Icons.person), text: 'Personal'),
+                Tab(icon: Icon(Icons.group), text: 'Chapter'),
+              ],
+              indicator: BoxDecoration(
+                color: theme.primaryColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              labelColor: theme.colorScheme.onPrimary,
+              unselectedLabelColor:
+                  theme.colorScheme.onSurface.withAlpha((0.8 * 255).round()),
+              indicatorSize: TabBarIndicatorSize.tab,
+            ),
+          ),
         ),
       ),
       body: Consumer<CalendarProvider>(
@@ -92,6 +110,15 @@ class _CalendarPageState extends State<CalendarPage>
     final descController = TextEditingController();
     TimeOfDay? startTime;
     TimeOfDay? endTime;
+    Color selectedColor = Theme.of(context).primaryColor;
+    final colorOptions = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
+    ];
 
     showDialog(
       context: context,
@@ -99,7 +126,7 @@ class _CalendarPageState extends State<CalendarPage>
         return StatefulBuilder(
           builder: (stateContext, setState) {
             final canAdd = titleController.text.trim().isNotEmpty;
-            
+
             return AlertDialog(
               title: Text('Add ${isPersonal ? "Personal" : "Chapter"} Event'),
               content: SingleChildScrollView(
@@ -162,6 +189,42 @@ class _CalendarPageState extends State<CalendarPage>
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    // Color picker row
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Event color'),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: colorOptions.map((c) {
+                              final isSelected = c == selectedColor;
+                              return GestureDetector(
+                                onTap: () => setState(() => selectedColor = c),
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 8),
+                                  width: isSelected ? 36 : 30,
+                                  height: isSelected ? 36 : 30,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: c,
+                                    border: isSelected
+                                        ? Border.all(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary,
+                                            width: 2)
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -175,18 +238,20 @@ class _CalendarPageState extends State<CalendarPage>
                       ? () {
                           final title = titleController.text.trim();
                           final desc = descController.text.trim();
-                          
+
                           // Validate title length
                           if (title.length > 100) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: const Text('Event title must be 100 characters or less'),
-                                backgroundColor: Theme.of(context).colorScheme.error,
+                                content: const Text(
+                                    'Event title must be 100 characters or less'),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.error,
                               ),
                             );
                             return;
                           }
-                          
+
                           // Validate that end time is after start time
                           if (startTime != null && endTime != null) {
                             final now = DateTime.now();
@@ -204,24 +269,26 @@ class _CalendarPageState extends State<CalendarPage>
                               endTime!.hour,
                               endTime!.minute,
                             );
-                            
+
                             if (!endDateTime.isAfter(startDateTime)) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text('End time must be after start time'),
-                                  backgroundColor: Theme.of(context).colorScheme.error,
+                                  content: const Text(
+                                      'End time must be after start time'),
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.error,
                                 ),
                               );
                               return;
                             }
                           }
-                          
+
                           final event = Event(
                             title: title,
                             description: desc,
                             startTime: startTime,
                             endTime: endTime,
-                            color: isPersonal ? Theme.of(context).primaryColor : Theme.of(context).colorScheme.secondary,
+                            color: selectedColor,
                           );
                           if (isPersonal) {
                             provider.addPersonalEvent(selectedDay, event);
@@ -262,7 +329,6 @@ class _CalendarView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final events = isPersonal
         ? provider.getPersonalEventsForDay(selectedDay)
         : provider.getChapterEventsForDay(selectedDay);
@@ -283,22 +349,44 @@ class _CalendarView extends StatelessWidget {
           headerStyle: HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
-            leftChevronIcon: Icon(Icons.chevron_left, color: theme.primaryColor),
-            rightChevronIcon: Icon(Icons.chevron_right, color: theme.primaryColor),
+            leftChevronIcon:
+                Icon(Icons.chevron_left, color: theme.primaryColor),
+            rightChevronIcon:
+                Icon(Icons.chevron_right, color: theme.primaryColor),
           ),
           calendarStyle: CalendarStyle(
             outsideDaysVisible: false,
             weekendTextStyle: TextStyle(
-              color: isDark ? Colors.white70 : Colors.grey[850],
+              color: theme.colorScheme.onSurface,
             ),
             selectedDecoration: BoxDecoration(
               color: theme.primaryColor,
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.3),
+              color: theme.primaryColor.withAlpha((0.3 * 255).round()),
               shape: BoxShape.circle,
             ),
+          ),
+          calendarBuilders: CalendarBuilders(
+            markerBuilder: (context, date, events) {
+              if (events.isEmpty) return const SizedBox.shrink();
+              final evts = events.cast<Event>();
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: evts.take(3).map((e) {
+                  return Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    decoration: BoxDecoration(
+                      color: e.color,
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
           onDaySelected: onDaySelected,
           onPageChanged: onPageChanged,
@@ -325,7 +413,8 @@ class _CalendarView extends StatelessWidget {
                         color: Theme.of(context).colorScheme.error,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 16),
-                        child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
+                        child: Icon(Icons.delete,
+                            color: Theme.of(context).colorScheme.onError),
                       ),
                       direction: DismissDirection.endToStart,
                       onDismissed: (_) {

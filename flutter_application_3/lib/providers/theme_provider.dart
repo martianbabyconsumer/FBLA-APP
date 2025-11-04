@@ -17,7 +17,7 @@ class ThemeProvider with ChangeNotifier {
     'Orange': Colors.orange,
     'Grey': Colors.grey,
   };
-  
+
   bool get isDarkMode => _isDarkMode;
   bool get isInitialized => _isInitialized;
 
@@ -25,7 +25,7 @@ class ThemeProvider with ChangeNotifier {
 
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     _prefs = await SharedPreferences.getInstance();
     _isDarkMode = _prefs?.getBool(_themeKey) ?? false;
     _selectedColor = _prefs?.getString(_themeColorKey) ?? 'Blue';
@@ -35,7 +35,7 @@ class ThemeProvider with ChangeNotifier {
 
   Future<void> toggleTheme() async {
     if (!_isInitialized) return;
-    
+
     _isDarkMode = !_isDarkMode;
     await _prefs?.setBool(_themeKey, _isDarkMode);
     notifyListeners();
@@ -56,7 +56,9 @@ class ThemeProvider with ChangeNotifier {
   ThemeData get currentTheme {
     final color = _colorMap[_selectedColor] ?? Colors.blue;
     final brightness = _isDarkMode ? Brightness.dark : Brightness.light;
-    final cs = ColorScheme.fromSwatch(primarySwatch: color, brightness: brightness).copyWith(brightness: brightness);
+    final cs =
+        ColorScheme.fromSwatch(primarySwatch: color, brightness: brightness)
+            .copyWith(brightness: brightness);
 
     // Enforce light theme background = white and make dark mode darker and cards lighter than background
     final scaffoldBg = _isDarkMode ? const Color(0xFF0B0B0D) : Colors.white;
@@ -67,17 +69,25 @@ class ThemeProvider with ChangeNotifier {
       scaffoldBackgroundColor: scaffoldBg,
       canvasColor: scaffoldBg,
       cardColor: cardCol,
-      dividerColor: cs.primary, // use primary as outline for boxes in light mode
+      dividerColor:
+          cs.primary, // use primary as outline for boxes in light mode
       appBarTheme: AppBarTheme(
         backgroundColor: cs.primary,
         foregroundColor: cs.onPrimary,
         elevation: 0,
       ),
-      iconTheme: IconThemeData(color: cs.onBackground),
-      elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(backgroundColor: cs.primary, foregroundColor: cs.onPrimary)),
+      // Prefer onSurface for icons so they contrast correctly on most surfaces
+      iconTheme: IconThemeData(color: cs.onSurface),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+              backgroundColor: cs.primary, foregroundColor: cs.onPrimary)),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        selectedItemColor: _isDarkMode ? Colors.white : cs.primary,
-        unselectedItemColor: cs.onBackground.withOpacity(0.6),
+        selectedItemColor: _isDarkMode ? cs.onSurface : cs.primary,
+        // Force a concrete grey for unselected icons to avoid web/browser defaults
+        unselectedItemColor: const Color(0xFF616161), // grey[700]
+        selectedIconTheme:
+            IconThemeData(color: _isDarkMode ? cs.onSurface : cs.primary),
+        unselectedIconTheme: const IconThemeData(color: Color(0xFF616161)),
         backgroundColor: scaffoldBg,
       ),
       unselectedWidgetColor: _isDarkMode ? Colors.grey[400] : Colors.grey[600],

@@ -24,7 +24,6 @@ class HomeFeedPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: Column(
@@ -34,7 +33,7 @@ class HomeFeedPage extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                  color: theme.dividerColor,
                   width: 1,
                 ),
               ),
@@ -43,20 +42,22 @@ class HomeFeedPage extends StatelessWidget {
             child: InkWell(
               onTap: () => _createNewPost(context),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[800] : Colors.grey[100],
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                  border: Border.all(color: theme.dividerColor),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.add, size: 20, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                    Icon(Icons.add, size: 20, color: theme.colorScheme.primary),
                     const SizedBox(width: 8),
                     Text(
                       'New Post',
                       style: TextStyle(
-                        color: isDark ? Colors.grey[300] : Colors.grey[700],
+                        color: theme.colorScheme.onSurface
+                            .withAlpha((0.7 * 255).round()),
                         fontSize: 16,
                       ),
                     ),
@@ -76,7 +77,8 @@ class HomeFeedPage extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final post = posts[index];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       child: PostCard(
                         post: post,
                         onLike: () => repo.toggleLike(post.id),
@@ -93,7 +95,8 @@ class HomeFeedPage extends StatelessWidget {
                         },
                         onMenuSelected: (value) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('$value on post ${post.id}')),
+                            SnackBar(
+                                content: Text('$value on post ${post.id}')),
                           );
                         },
                       ),

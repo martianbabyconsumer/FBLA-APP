@@ -13,13 +13,13 @@ class Post {
     required this.title,
     required this.body,
     this.imageUrl,
-  int? likes,
-  bool? liked,
-  bool? saved,
+    int? likes,
+    bool? liked,
+    bool? saved,
     List<Comment>? comments,
   })  : likes = likes ?? 0,
-    liked = liked ?? false,
-    saved = saved ?? false,
+        liked = liked ?? false,
+        saved = saved ?? false,
         comments = comments ?? <Comment>[];
   bool saved;
 
@@ -84,6 +84,7 @@ abstract class PostRepository extends ChangeNotifier {
   List<Post> getFavorites();
   void toggleSave(String postId);
   List<Post> getSavedPosts();
+
   /// Initialize repository (loads persisted saved posts)
   Future<void> initialize();
 }
@@ -207,10 +208,12 @@ class InMemoryPostRepository extends PostRepository {
   }
 
   @override
-  List<Post> getFavorites() => List<Post>.unmodifiable(_posts.where((p) => p.liked).map((p) => p.copy()).toList());
+  List<Post> getFavorites() => List<Post>.unmodifiable(
+      _posts.where((p) => p.liked).map((p) => p.copy()).toList());
 
   @override
-  List<Post> getSavedPosts() => List<Post>.unmodifiable(_posts.where((p) => p.saved).map((p) => p.copy()).toList());
+  List<Post> getSavedPosts() => List<Post>.unmodifiable(
+      _posts.where((p) => p.saved).map((p) => p.copy()).toList());
 
   @override
   void addComment(String postId, Comment comment) {

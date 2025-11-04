@@ -29,7 +29,11 @@ class FavoritesPage extends StatelessWidget {
                     title: Text(p.title),
                     subtitle: Text(p.displayName),
                     trailing: IconButton(
-                      icon: Icon(p.liked ? Icons.favorite : Icons.favorite_border, color: p.liked ? Colors.pink : null),
+                      icon: Icon(
+                          p.liked ? Icons.favorite : Icons.favorite_border,
+                          color: p.liked
+                              ? Theme.of(context).colorScheme.secondary
+                              : null),
                       onPressed: () {
                         // toggle like via repo
                         repo.toggleLike(p.id);
@@ -40,11 +44,12 @@ class FavoritesPage extends StatelessWidget {
                       final repo = context.read<PostRepository>();
                       final post = repo.getPostById(p.id);
                       if (post == null) return;
-                      
+
                       if (!context.mounted) return;
                       await Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => ChangeNotifierProvider<PostRepository>.value(
+                          builder: (context) =>
+                              ChangeNotifierProvider<PostRepository>.value(
                             value: repo,
                             child: Scaffold(
                               appBar: AppBar(title: const Text('Post')),
@@ -54,25 +59,41 @@ class FavoritesPage extends StatelessWidget {
                                     padding: const EdgeInsets.all(12),
                                     child: SingleChildScrollView(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text(post.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                          Text(post.title,
+                                              style: const TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
                                           const SizedBox(height: 8),
-                                          Text(post.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                          Text(post.displayName,
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
                                           const SizedBox(height: 8),
                                           Text(post.body),
                                           const SizedBox(height: 16),
                                           Consumer<PostRepository>(
                                             builder: (context, localRepo, _) {
-                                              final updatedPost = localRepo.getPostById(post.id) ?? post;
+                                              final updatedPost = localRepo
+                                                      .getPostById(post.id) ??
+                                                  post;
                                               return Row(
                                                 children: [
                                                   IconButton(
-                                                    onPressed: () => localRepo.toggleLike(updatedPost.id),
+                                                    onPressed: () =>
+                                                        localRepo.toggleLike(
+                                                            updatedPost.id),
                                                     icon: Icon(
-                                                      updatedPost.liked ? Icons.favorite : Icons.favorite_border,
-                                                      color: updatedPost.liked ? Colors.pink : null
-                                                    ),
+                                                        updatedPost.liked
+                                                            ? Icons.favorite
+                                                            : Icons
+                                                                .favorite_border,
+                                                        color: updatedPost.liked
+                                                            ? Theme.of(context)
+                                                                .colorScheme
+                                                                .secondary
+                                                            : null),
                                                   ),
                                                   Text('${updatedPost.likes}'),
                                                 ],

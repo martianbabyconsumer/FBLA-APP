@@ -20,7 +20,7 @@ class _ChapterPageState extends State<ChapterPage> {
   late Channel _selectedChannel;
   List<ChapterMessage> _messages = [];
   bool _showEmojiPicker = false;
-  
+
   // Calendar state
   late DateTime _focusedDay;
   late DateTime _selectedDay;
@@ -91,7 +91,8 @@ class _ChapterPageState extends State<ChapterPage> {
         id: '1',
         authorId: 'advisor',
         authorName: 'Chapter Advisor',
-        content: '🎉 Welcome to our FBLA Chapter! This is our new communication platform. Please read the rules and guidelines pinned in the announcements channel.',
+        content:
+            '🎉 Welcome to our FBLA Chapter! This is our new communication platform. Please read the rules and guidelines pinned in the announcements channel.',
         timestamp: now.subtract(const Duration(days: 1)),
         type: MessageType.announcement,
         isPinned: true,
@@ -100,7 +101,8 @@ class _ChapterPageState extends State<ChapterPage> {
         id: '2',
         authorId: 'president',
         authorName: 'Chapter President',
-        content: 'Our next meeting will be on Friday at 3:30 PM in Room 201. We\'ll be discussing upcoming competition preparations!',
+        content:
+            'Our next meeting will be on Friday at 3:30 PM in Room 201. We\'ll be discussing upcoming competition preparations!',
         timestamp: now.subtract(const Duration(hours: 2)),
         type: MessageType.eventNotification,
       ),
@@ -142,7 +144,8 @@ class _ChapterPageState extends State<ChapterPage> {
       var reaction = message.reactions.firstWhere(
         (r) => r.emoji == emoji,
         orElse: () {
-          final newReaction = ReactionCount(emoji: emoji, userIds: ['currentUser']);
+          final newReaction =
+              ReactionCount(emoji: emoji, userIds: ['currentUser']);
           message.reactions.add(newReaction);
           return newReaction;
         },
@@ -179,7 +182,7 @@ class _ChapterPageState extends State<ChapterPage> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (stateContext, setState) {
           final canAdd = titleController.text.trim().isNotEmpty;
-          
+
           return AlertDialog(
             title: const Text('Add Chapter Event'),
             content: SingleChildScrollView(
@@ -218,7 +221,8 @@ class _ChapterPageState extends State<ChapterPage> {
                             }
                           },
                           icon: const Icon(Icons.access_time),
-                          label: Text(startTime?.format(dialogContext) ?? 'Start Time'),
+                          label: Text(
+                              startTime?.format(dialogContext) ?? 'Start Time'),
                         ),
                       ),
                       Expanded(
@@ -233,7 +237,8 @@ class _ChapterPageState extends State<ChapterPage> {
                             }
                           },
                           icon: const Icon(Icons.access_time),
-                          label: Text(endTime?.format(dialogContext) ?? 'End Time'),
+                          label: Text(
+                              endTime?.format(dialogContext) ?? 'End Time'),
                         ),
                       ),
                     ],
@@ -248,61 +253,65 @@ class _ChapterPageState extends State<ChapterPage> {
               ),
               TextButton(
                 onPressed: canAdd
-                  ? () {
-                    final title = titleController.text.trim();
-                    final desc = descController.text.trim();
-                    
-                    // Validate title length
-                    if (title.length > 100) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Event title must be 100 characters or less'),
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                        ),
-                      );
-                      return;
-                    }
-                    
-                    // Validate that end time is after start time
-                    if (startTime != null && endTime != null) {
-                      final now = DateTime.now();
-                      final startDateTime = DateTime(
-                        now.year,
-                        now.month,
-                        now.day,
-                        startTime!.hour,
-                        startTime!.minute,
-                      );
-                      final endDateTime = DateTime(
-                        now.year,
-                        now.month,
-                        now.day,
-                        endTime!.hour,
-                        endTime!.minute,
-                      );
-                      
-                      if (!endDateTime.isAfter(startDateTime)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('End time must be after start time'),
-                            backgroundColor: Theme.of(context).colorScheme.error,
-                          ),
+                    ? () {
+                        final title = titleController.text.trim();
+                        final desc = descController.text.trim();
+
+                        // Validate title length
+                        if (title.length > 100) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                  'Event title must be 100 characters or less'),
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Validate that end time is after start time
+                        if (startTime != null && endTime != null) {
+                          final now = DateTime.now();
+                          final startDateTime = DateTime(
+                            now.year,
+                            now.month,
+                            now.day,
+                            startTime!.hour,
+                            startTime!.minute,
+                          );
+                          final endDateTime = DateTime(
+                            now.year,
+                            now.month,
+                            now.day,
+                            endTime!.hour,
+                            endTime!.minute,
+                          );
+
+                          if (!endDateTime.isAfter(startDateTime)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                    'End time must be after start time'),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.error,
+                              ),
+                            );
+                            return;
+                          }
+                        }
+
+                        final event = Event(
+                          title: title,
+                          description: desc,
+                          startTime: startTime,
+                          endTime: endTime,
+                          color: Colors.orange,
                         );
-                        return;
+                        provider.addChapterEvent(_selectedDay, event);
+                        Navigator.pop(dialogContext, true);
                       }
-                    }
-                    
-                    final event = Event(
-                      title: title,
-                      description: desc,
-                      startTime: startTime,
-                      endTime: endTime,
-                      color: Colors.orange,
-                    );
-                    provider.addChapterEvent(_selectedDay, event);
-                    Navigator.pop(dialogContext, true);
-                  }
-                  : null,
+                    : null,
                 child: const Text('ADD'),
               ),
             ],
@@ -315,7 +324,6 @@ class _ChapterPageState extends State<ChapterPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: Row(
@@ -323,7 +331,7 @@ class _ChapterPageState extends State<ChapterPage> {
           // Channel sidebar
           Container(
             width: 240,
-            color: isDark ? Colors.grey[900] : Colors.grey[100],
+            color: theme.colorScheme.surfaceContainerHighest,
             child: Column(
               children: [
                 Container(
@@ -355,20 +363,18 @@ class _ChapterPageState extends State<ChapterPage> {
                           channel.icon,
                           color: isSelected
                               ? theme.primaryColor
-                              : isDark
-                                  ? Colors.grey[400]
-                                  : Colors.grey[700],
+                              : theme.unselectedWidgetColor,
                         ),
                         title: Text(
                           '#${channel.name}',
                           style: TextStyle(
                             color: isSelected
                                 ? theme.primaryColor
-                                : isDark
-                                    ? Colors.grey[300]
-                                    : Colors.grey[800],
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.normal,
+                                : theme.colorScheme.onSurface
+                                    .withAlpha((0.8 * 255).round()),
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                         selected: isSelected,
@@ -397,12 +403,15 @@ class _ChapterPageState extends State<ChapterPage> {
                   decoration: BoxDecoration(
                     color: theme.scaffoldBackgroundColor,
                     border: Border.all(
-                      color: theme.brightness == Brightness.light ? theme.colorScheme.primary : theme.dividerColor,
+                      color: theme.brightness == Brightness.light
+                          ? theme.colorScheme.primary
+                          : theme.dividerColor,
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: theme.shadowColor.withOpacity(0.08),
+                        color:
+                            theme.shadowColor.withAlpha((0.08 * 255).round()),
                         blurRadius: 4,
                       ),
                     ],
@@ -425,7 +434,8 @@ class _ChapterPageState extends State<ChapterPage> {
                       Text(
                         _selectedChannel.description,
                         style: TextStyle(
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          color: theme.colorScheme.onSurface
+                              .withAlpha((0.65 * 255).round()),
                         ),
                       ),
                     ],
@@ -434,22 +444,26 @@ class _ChapterPageState extends State<ChapterPage> {
                 // Content area - show calendar for chapter-calendar channel, messages for others
                 Expanded(
                   child: _selectedChannel.id == 'chapter-calendar'
-                      ? _buildCalendarView(theme, isDark)
-                      : _buildMessagesView(theme, isDark),
+                      ? _buildCalendarView(theme)
+                      : _buildMessagesView(theme),
                 ),
                 // Message input
-                if (!_selectedChannel.isLocked && _selectedChannel.id != 'chapter-calendar')
+                if (!_selectedChannel.isLocked &&
+                    _selectedChannel.id != 'chapter-calendar')
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.scaffoldBackgroundColor,
                       border: Border.all(
-                        color: theme.brightness == Brightness.light ? theme.colorScheme.primary : theme.dividerColor,
+                        color: theme.brightness == Brightness.light
+                            ? theme.colorScheme.primary
+                            : theme.dividerColor,
                         width: 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: theme.shadowColor.withOpacity(0.08),
+                          color:
+                              theme.shadowColor.withAlpha((0.08 * 255).round()),
                           blurRadius: 4,
                           offset: const Offset(0, -2),
                         ),
@@ -468,14 +482,13 @@ class _ChapterPageState extends State<ChapterPage> {
                           child: TextField(
                             controller: _messageController,
                             decoration: InputDecoration(
-                              hintText:
-                                  'Message #${_selectedChannel.name}',
+                              hintText: 'Message #${_selectedChannel.name}',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
                                 borderSide: BorderSide.none,
                               ),
-                filled: true,
-                fillColor: isDark ? theme.cardColor : theme.cardColor,
+                              filled: true,
+                              fillColor: theme.cardColor,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
@@ -511,7 +524,7 @@ class _ChapterPageState extends State<ChapterPage> {
     );
   }
 
-  Widget _buildCalendarView(ThemeData theme, bool isDark) {
+  Widget _buildCalendarView(ThemeData theme) {
     return Consumer<CalendarProvider>(
       builder: (context, calendarProvider, child) {
         return Column(
@@ -524,12 +537,14 @@ class _ChapterPageState extends State<ChapterPage> {
                       firstDay: DateTime.utc(2024, 1, 1),
                       lastDay: DateTime.utc(2025, 12, 31),
                       focusedDay: _focusedDay,
-                      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                      selectedDayPredicate: (day) =>
+                          isSameDay(_selectedDay, day),
                       calendarFormat: CalendarFormat.month,
                       availableCalendarFormats: const {
                         CalendarFormat.month: 'Month'
                       },
-                      eventLoader: (day) => calendarProvider.getChapterEventsForDay(day),
+                      eventLoader: (day) =>
+                          calendarProvider.getChapterEventsForDay(day),
                       startingDayOfWeek: StartingDayOfWeek.sunday,
                       headerStyle: HeaderStyle(
                         formatButtonVisible: false,
@@ -546,17 +561,18 @@ class _ChapterPageState extends State<ChapterPage> {
                       calendarStyle: CalendarStyle(
                         outsideDaysVisible: false,
                         weekendTextStyle: TextStyle(
-                          color: isDark ? Colors.white70 : Colors.grey[850],
+                          color: theme.colorScheme.onSurface,
                         ),
                         holidayTextStyle: TextStyle(
-                          color: isDark ? Colors.white70 : Colors.grey[850],
+                          color: theme.colorScheme.onSurface,
                         ),
                         selectedDecoration: BoxDecoration(
                           color: theme.colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
                         todayDecoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.3),
+                          color: theme.colorScheme.primary
+                              .withAlpha((0.3 * 255).round()),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -591,7 +607,9 @@ class _ChapterPageState extends State<ChapterPage> {
                         ],
                       ),
                     ),
-                    ...calendarProvider.getChapterEventsForDay(_selectedDay).map((event) {
+                    ...calendarProvider
+                        .getChapterEventsForDay(_selectedDay)
+                        .map((event) {
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -610,7 +628,8 @@ class _ChapterPageState extends State<ChapterPage> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (event.startTime != null && event.endTime != null) ...[
+                              if (event.startTime != null &&
+                                  event.endTime != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   '${event.startTime!.format(context)} - ${event.endTime!.format(context)}',
@@ -625,9 +644,11 @@ class _ChapterPageState extends State<ChapterPage> {
                           ),
                           isThreeLine: true,
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
+                            icon: Icon(Icons.delete,
+                                color: theme.colorScheme.error),
                             onPressed: () {
-                              calendarProvider.removeChapterEvent(_selectedDay, event);
+                              calendarProvider.removeChapterEvent(
+                                  _selectedDay, event);
                             },
                           ),
                         ),
@@ -644,15 +665,15 @@ class _ChapterPageState extends State<ChapterPage> {
     );
   }
 
-  Widget _buildMessagesView(ThemeData theme, bool isDark) {
+  Widget _buildMessagesView(ThemeData theme) {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final message = _messages[index];
-        final showHeader = index == 0 ||
-            message.authorId != _messages[index - 1].authorId;
+        final showHeader =
+            index == 0 || message.authorId != _messages[index - 1].authorId;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,13 +699,10 @@ class _ChapterPageState extends State<ChapterPage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    DateFormat.yMMMd()
-                        .add_jm()
-                        .format(message.timestamp),
+                    DateFormat.yMMMd().add_jm().format(message.timestamp),
                     style: TextStyle(
-                      color: isDark
-                          ? Colors.grey[400]
-                          : Colors.grey[600],
+                      color: theme.colorScheme.onSurface
+                          .withAlpha((0.65 * 255).round()),
                       fontSize: 12,
                     ),
                   ),
@@ -715,11 +733,10 @@ class _ChapterPageState extends State<ChapterPage> {
                     Wrap(
                       spacing: 8,
                       children: message.reactions.map((reaction) {
-                        final isReacted = reaction.userIds
-                            .contains('currentUser');
+                        final isReacted =
+                            reaction.userIds.contains('currentUser');
                         return InkWell(
-                          onTap: () => _toggleReaction(
-                              message, reaction.emoji),
+                          onTap: () => _toggleReaction(message, reaction.emoji),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -728,10 +745,8 @@ class _ChapterPageState extends State<ChapterPage> {
                             decoration: BoxDecoration(
                               color: isReacted
                                   ? theme.primaryColor
-                                      .withOpacity(0.1)
-                                  : isDark
-                                      ? Colors.grey[800]
-                                      : Colors.grey[200],
+                                      .withAlpha((0.1 * 255).round())
+                                  : theme.cardColor,
                               borderRadius: BorderRadius.circular(12),
                               border: isReacted
                                   ? Border.all(
@@ -742,9 +757,7 @@ class _ChapterPageState extends State<ChapterPage> {
                             child: Text(
                               '${reaction.emoji} ${reaction.count}',
                               style: TextStyle(
-                                color: isReacted
-                                    ? theme.primaryColor
-                                    : null,
+                                color: isReacted ? theme.primaryColor : null,
                               ),
                             ),
                           ),

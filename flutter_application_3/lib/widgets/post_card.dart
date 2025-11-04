@@ -22,19 +22,21 @@ class PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final userProvider = context.watch<UserProvider>();
 
     return Container(
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.brightness == Brightness.light ? theme.colorScheme.primary : theme.dividerColor,
+          color: theme.brightness == Brightness.light
+              ? theme.colorScheme.primary
+              : theme.dividerColor,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withOpacity(0.06),
+            color: theme.shadowColor.withAlpha((0.06 * 255).round()),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -49,62 +51,65 @@ class PostCard extends StatelessWidget {
             Row(
               children: [
                 // Profile picture - show custom image only for user's own posts
-                Consumer<UserProvider>(
-                  builder: (context, userProvider, _) {
-                    // Only show custom profile picture for user's own posts (@you) and on mobile
-                    if (!kIsWeb && post.handle == '@you' && userProvider.profileImagePath != null) {
-                      return ClipOval(
-                        child: Image.file(
-                          File(userProvider.profileImagePath!),
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            // If image fails to load, show FBLA logo
-                            return Container(
+                // Use the watched UserProvider above so this updates when the user
+                // changes their profile image or username in settings.
+                Builder(builder: (context) {
+                  final userHandle = (userProvider.username != null && userProvider.username!.isNotEmpty)
+                      ? '@${userProvider.username}'
+                      : '@you';
+                  if (!kIsWeb && post.handle == userHandle && userProvider.profileImagePath != null) {
+                    return ClipOval(
+                      child: Image.file(
+                        File(userProvider.profileImagePath!),
+                        key: ValueKey(userProvider.profileImagePath),
                         width: 48,
                         height: 48,
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            'FBLA',
-                            style: TextStyle(
-                              color: theme.colorScheme.onPrimary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          // If image fails to load, show FBLA logo
+                          return Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor,
+                              shape: BoxShape.circle,
                             ),
+                            child: Center(
+                              child: Text(
+                                'FBLA',
+                                style: TextStyle(
+                                  color: theme.colorScheme.onPrimary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  } else {
+                    // Show FBLA logo for all other posts or on web
+                    return Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'FBLA',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      );
-                          },
-                        ),
-                      );
-                    } else {
-                      // Show FBLA logo for all other posts or on web
-                      return Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            'FBLA',
-                            style: TextStyle(
-                              color: theme.colorScheme.onPrimary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                      ),
+                    );
+                  }
+                }),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -119,14 +124,18 @@ class PostCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             post.dateLabel,
-                            style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                            style: TextStyle(
+                                color: theme.colorScheme.onSurface
+                                    .withAlpha((0.65 * 255).round())),
                           ),
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(
                         post.handle,
-                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                        style: TextStyle(
+                            color: theme.colorScheme.onSurface
+                                .withAlpha((0.7 * 255).round())),
                       ),
                     ],
                   ),
@@ -159,16 +168,33 @@ class PostCard extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        post.imageUrl!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        errorBuilder: (c, e, s) => Container(
-                          color: isDark ? Colors.grey[800] : Colors.grey[200],
-                          child: const Center(child: Icon(Icons.broken_image)),
-                        ),
-                      ),
+                      child: post.imageUrl!.startsWith('http')
+                          ? Image.network(
+                              post.imageUrl!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (c, e, s) => Container(
+                                color: theme.cardColor,
+                                child: Center(
+                                    child: Icon(Icons.broken_image,
+                                        color: theme.colorScheme.onSurface
+                                            .withAlpha((0.6 * 255).round()))),
+                              ),
+                            )
+                          : Image.file(
+                              File(post.imageUrl!),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (c, e, s) => Container(
+                                color: theme.cardColor,
+                                child: Center(
+                                    child: Icon(Icons.broken_image,
+                                        color: theme.colorScheme.onSurface
+                                            .withAlpha((0.6 * 255).round()))),
+                              ),
+                            ),
                     ),
                     Positioned(
                       right: 36,
@@ -178,7 +204,8 @@ class PostCard extends StatelessWidget {
                         height: 80,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: theme.colorScheme.secondary, width: 4),
+                          border: Border.all(
+                              color: theme.colorScheme.secondary, width: 4),
                         ),
                       ),
                     ),
@@ -191,16 +218,30 @@ class PostCard extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: onLike,
-                    icon: Icon(
+                  icon: Icon(
                     post.liked ? Icons.favorite : Icons.favorite_border,
-                    color: post.liked ? theme.colorScheme.secondary : null,
+                    color: post.liked
+                        ? theme.colorScheme.primary
+                        : (theme.brightness == Brightness.light
+                            ? theme.colorScheme.onSurface
+                                .withAlpha((0.7 * 255).round())
+                            : theme.colorScheme.onSurface
+                                .withAlpha((0.85 * 255).round())),
                   ),
+                  splashRadius: 20,
                 ),
                 Text('${post.likes}'),
                 const SizedBox(width: 16),
                 IconButton(
                   onPressed: onComments,
-                  icon: const Icon(Icons.mode_comment_outlined),
+                  icon: Icon(
+                    Icons.mode_comment_outlined,
+                    color: theme.brightness == Brightness.light
+                        ? theme.colorScheme.onSurface
+                            .withAlpha((0.7 * 255).round())
+                        : theme.colorScheme.onSurface
+                            .withAlpha((0.85 * 255).round()),
+                  ),
                 ),
                 Text('${post.comments.length}'),
                 const Spacer(),
@@ -209,10 +250,21 @@ class PostCard extends StatelessWidget {
                     final wasSaved = post.saved;
                     context.read<PostRepository>().toggleSave(post.id);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(wasSaved ? 'Removed from saved' : 'Saved')),
+                      SnackBar(
+                          content:
+                              Text(wasSaved ? 'Removed from saved' : 'Saved')),
                     );
                   },
-                  icon: Icon(post.saved ? Icons.bookmark : Icons.bookmark_border),
+                  icon: Icon(
+                    post.saved ? Icons.bookmark : Icons.bookmark_border,
+                    color: post.saved
+                        ? theme.colorScheme.primary
+                        : (theme.brightness == Brightness.light
+                            ? theme.colorScheme.onSurface
+                                .withAlpha((0.7 * 255).round())
+                            : theme.colorScheme.onSurface
+                                .withAlpha((0.85 * 255).round())),
+                  ),
                 ),
                 IconButton(
                   onPressed: () {},

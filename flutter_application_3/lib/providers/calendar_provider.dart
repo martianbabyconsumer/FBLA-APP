@@ -11,7 +11,7 @@ class CalendarProvider extends ChangeNotifier {
 
   void _initializeSampleEvents() {
     final now = DateTime.now();
-    
+
     // Chapter events
     _chapterEvents[DateTime(now.year, now.month, now.day + 2)] = [
       Event(
@@ -22,7 +22,7 @@ class CalendarProvider extends ChangeNotifier {
         color: Colors.blue,
       ),
     ];
-    
+
     _chapterEvents[DateTime(now.year, now.month, now.day + 5)] = [
       Event(
         title: 'Leadership Conference',
