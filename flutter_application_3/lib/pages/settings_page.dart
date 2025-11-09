@@ -20,6 +20,10 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _displayNameController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _bioController = TextEditingController();
+  final _eventController = TextEditingController();
+  final _chapterController = TextEditingController();
+  String _selectedGrade = '';
   final ImagePicker _picker = ImagePicker();
   XFile? _webImage; // For web platform
   bool _enableNotifications = false;
@@ -45,6 +49,12 @@ class _SettingsPageState extends State<SettingsPage> {
           });
         }
       });
+      
+      // Load profile fields from UserProvider
+      _bioController.text = userProvider.bio;
+      _eventController.text = userProvider.event;
+      _chapterController.text = userProvider.chapter;
+      _selectedGrade = userProvider.grade;
 
       // For web, load the saved profile image path as _webImage if it exists
       if (kIsWeb && userProvider.profileImagePath != null) {
@@ -61,6 +71,9 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _displayNameController.dispose();
     _usernameController.dispose();
+    _bioController.dispose();
+    _eventController.dispose();
+    _chapterController.dispose();
     super.dispose();
   }
 
@@ -101,6 +114,10 @@ class _SettingsPageState extends State<SettingsPage> {
         if (authService.user?.uid != null) {
           final username = userProvider.username;
           final handle = (username != null && username.isNotEmpty) ? '@$username' : '@you';
+          print('DEBUG: Updating posts with profileImagePath: ${image.path}');
+          print('DEBUG: User ID: ${authService.user!.uid}');
+          print('DEBUG: Handle: $handle');
+          print('DEBUG: Display Name: ${userProvider.displayName}');
           postRepository.updateUserInfo(
             authService.user!.uid, 
             handle, 
@@ -249,6 +266,341 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _showChangePasswordDialog() async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool obscureCurrentPassword = true;
+    bool obscureNewPassword = true;
+    bool obscureConfirmPassword = true;
+
+    await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (stateContext, setDialogState) {
+          return AlertDialog(
+            title: const Text('Change Password'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: currentPasswordController,
+                    obscureText: obscureCurrentPassword,
+                    decoration: InputDecoration(
+                      labelText: 'Current Password',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureCurrentPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            obscureCurrentPassword = !obscureCurrentPassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: newPasswordController,
+                    obscureText: obscureNewPassword,
+                    decoration: InputDecoration(
+                      labelText: 'New Password',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureNewPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            obscureNewPassword = !obscureNewPassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: confirmPasswordController,
+                    obscureText: obscureConfirmPassword,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm New Password',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            obscureConfirmPassword = !obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Password must be at least 6 characters',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final currentPassword = currentPasswordController.text.trim();
+                  final newPassword = newPasswordController.text.trim();
+                  final confirmPassword = confirmPasswordController.text.trim();
+
+                  // Validation - show snackbar but keep dialog open
+                  if (currentPassword.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter your current password')),
+                    );
+                    return;
+                  }
+
+                  if (newPassword.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter a new password')),
+                    );
+                    return;
+                  }
+
+                  if (newPassword.length < 6) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('New password must be at least 6 characters')),
+                    );
+                    return;
+                  }
+
+                  if (newPassword != confirmPassword) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('New passwords do not match'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  if (currentPassword == newPassword) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('New password must be different from current password')),
+                    );
+                    return;
+                  }
+
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                  );
+
+                  // Attempt to change password
+                  final authService = context.read<AuthService>();
+                  final error = await authService.changePassword(
+                    currentPassword: currentPassword,
+                    newPassword: newPassword,
+                  );
+
+                  // Close loading indicator
+                  if (context.mounted) Navigator.of(context).pop();
+
+                  if (context.mounted) {
+                    if (error == null) {
+                      // Close password dialog
+                      Navigator.of(dialogContext).pop(true);
+                      
+                      // Show verification email sent dialog with auto-check
+                      await showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (verifyDialogContext) {
+                          // Start checking for email verification
+                          Future.delayed(const Duration(seconds: 2)).then((_) async {
+                            while (verifyDialogContext.mounted) {
+                              await authService.refreshUser();
+                              if (authService.isEmailVerified) {
+                                if (verifyDialogContext.mounted) {
+                                  Navigator.of(verifyDialogContext).pop(true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Email verified successfully! 🎉'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                                break;
+                              }
+                              await Future.delayed(const Duration(seconds: 3));
+                            }
+                          });
+
+                          return WillPopScope(
+                            onWillPop: () async {
+                              // Show confirmation dialog before allowing back navigation
+                              final shouldExit = await showDialog<bool>(
+                                context: verifyDialogContext,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Skip Verification?'),
+                                  content: const Text(
+                                    'Your email is not verified yet. You can verify it later from settings, but some features may be limited.\n\nAre you sure you want to skip?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('Continue Waiting'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                      child: const Text('Skip Verification'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              return shouldExit ?? false;
+                            },
+                            child: AlertDialog(
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.mark_email_read, color: Colors.blue),
+                                  SizedBox(width: 8),
+                                  Text('Check Your Email'),
+                                ],
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Your password has been updated successfully!'),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'We\'ve sent a verification link to your email. Click the link to verify.',
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.blue.shade200),
+                                    ),
+                                    child: const Text(
+                                      'This dialog will close automatically when you click the link. Check spam/junk folder if needed.',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'Waiting for verification...',
+                                        style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.orange.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.lock, size: 16, color: Colors.orange.shade700),
+                                        const SizedBox(width: 8),
+                                        const Expanded(
+                                          child: Text(
+                                            'You must verify to continue. Use back button to skip.',
+                                            style: TextStyle(fontSize: 11),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () async {
+                                    final error = await authService.resendVerificationEmail();
+                                    if (verifyDialogContext.mounted) {
+                                      if (error == null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Verification email sent!'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text(error)),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: const Text('Resend Email'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    } else {
+                      // Show error but keep password dialog open
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(error),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Change Password'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Clean up controllers
+    currentPasswordController.dispose();
+    newPasswordController.dispose();
+    confirmPasswordController.dispose();
+  }
+
   Future<void> _saveSettings() async {
     final authService = context.read<AuthService>();
     final postRepository = context.read<PostRepository>();
@@ -305,6 +657,51 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save settings: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfileInfo() async {
+    final userProvider = context.read<UserProvider>();
+    
+    try {
+      final bio = _bioController.text.trim();
+      final event = _eventController.text.trim();
+      final chapter = _chapterController.text.trim();
+      final grade = _selectedGrade;
+
+      // Validate required fields
+      if (event.isEmpty || chapter.isEmpty || grade.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please fill in all required fields (Event, Chapter, Grade)'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Update UserProvider
+      await userProvider.updateBio(bio);
+      await userProvider.updateEvent(event);
+      await userProvider.updateChapter(chapter);
+      await userProvider.updateGrade(grade);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile information saved successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save profile info: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -444,6 +841,91 @@ class _SettingsPageState extends State<SettingsPage> {
                               icon: const Icon(Icons.refresh),
                               label: const Text('Reset')),
                         ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Profile Information Section
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Profile Information',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      // Bio
+                      TextField(
+                        controller: _bioController,
+                        maxLines: 4,
+                        maxLength: 500,
+                        decoration: const InputDecoration(
+                          labelText: 'Bio',
+                          hintText: 'Tell us about yourself...',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.info_outline),
+                          helperText: 'Max 500 characters',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Event
+                      TextField(
+                        controller: _eventController,
+                        decoration: const InputDecoration(
+                          labelText: 'Event *',
+                          hintText: 'e.g., Business Presentation',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.event),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Chapter
+                      TextField(
+                        controller: _chapterController,
+                        decoration: const InputDecoration(
+                          labelText: 'Chapter *',
+                          hintText: 'e.g., Mountain View High',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.group),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Grade Dropdown
+                      DropdownButtonFormField<String>(
+                        value: _selectedGrade.isEmpty ? null : _selectedGrade,
+                        decoration: const InputDecoration(
+                          labelText: 'Grade *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.school),
+                        ),
+                        hint: const Text('Select your grade'),
+                        items: const [
+                          DropdownMenuItem(value: '9', child: Text('Grade 9')),
+                          DropdownMenuItem(value: '10', child: Text('Grade 10')),
+                          DropdownMenuItem(value: '11', child: Text('Grade 11')),
+                          DropdownMenuItem(value: '12', child: Text('Grade 12')),
+                          DropdownMenuItem(value: 'Grad', child: Text('Graduate')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedGrade = value ?? '';
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: _saveProfileInfo,
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save Profile Info'),
                       ),
                     ],
                   ),
@@ -762,13 +1244,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       leading: const Icon(Icons.security),
                       title: const Text('Change Password'),
                       trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        // TODO: Implement password change flow (placeholder)
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Change password not implemented')));
-                      },
+                      onTap: () => _showChangePasswordDialog(),
                     ),
                     const Divider(),
                     ListTile(

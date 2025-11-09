@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import 'notification_repository.dart';
+import '../services/firebase_user_service.dart';
 
 const String _savedKey = 'saved_posts';
 const String _firstPostKey = 'user_first_post_ids';
@@ -193,35 +194,76 @@ class InMemoryPostRepository extends PostRepository {
   final Map<String, List<String>> _reportedPosts = {}; // postId -> list of reporter user IDs
   NotificationRepository? _notificationRepo;
 
-  // Shared bot names for consistency between likes and comments
-  static const List<String> _botNames = [
-    'Steven Brown',
-    'Jessica Martinez',
-    'Michael Thompson',
-    'Ashley Garcia',
-    'David Rodriguez',
-    'Emily Wilson',
-    'Christopher Lee',
-    'Amanda Davis',
+  // Lists for generating diverse bot names
+  static const List<String> _firstNames = [
+    'Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey',
+    'Riley', 'Avery', 'Quinn', 'Jamie', 'Dakota',
+    'Emma', 'Liam', 'Olivia', 'Noah', 'Sophia',
+    'Mason', 'Isabella', 'William', 'Ava', 'James',
+    'Charlotte', 'Benjamin', 'Mia', 'Lucas', 'Amelia',
+    'Michael', 'Harper', 'Elijah', 'Evelyn', 'Alexander',
+    'Abigail', 'Daniel', 'Emily', 'Matthew', 'Elizabeth',
+    'Jackson', 'Sofia', 'Sebastian', 'Avery', 'David',
+    'Ella', 'Joseph', 'Madison', 'Samuel', 'Scarlett',
+    'Henry', 'Victoria', 'Owen', 'Aria', 'Wyatt',
   ];
   
-  static const List<String> _botHandles = [
-    '@steven_b',
-    '@jessica_m',
-    '@michael_t',
-    '@ashley_g',
-    '@david_r',
-    '@emily_w',
-    '@chris_l',
-    '@amanda_d',
+  static const List<String> _lastNames = [
+    'Smith', 'Johnson', 'Williams', 'Brown', 'Jones',
+    'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+    'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson',
+    'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+    'Lee', 'Perez', 'Thompson', 'White', 'Harris',
+    'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
+    'Walker', 'Young', 'Allen', 'King', 'Wright',
+    'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+    'Green', 'Adams', 'Nelson', 'Baker', 'Hall',
+    'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts',
   ];
+  
+  // Cache for generated bot names to maintain consistency
+  final Map<int, String> _botNameCache = {};
+  final Map<int, String> _botHandleCache = {};
+  
+  // Generate a bot name by combining random first and last names
+  String _generateBotName(int seed) {
+    if (_botNameCache.containsKey(seed)) {
+      return _botNameCache[seed]!;
+    }
+    
+    final random = math.Random(seed);
+    final firstName = _firstNames[random.nextInt(_firstNames.length)];
+    final lastName = _lastNames[random.nextInt(_lastNames.length)];
+    final fullName = '$firstName $lastName';
+    
+    _botNameCache[seed] = fullName;
+    return fullName;
+  }
+  
+  // Generate a bot handle from the name
+  String _generateBotHandle(int seed) {
+    if (_botHandleCache.containsKey(seed)) {
+      return _botHandleCache[seed]!;
+    }
+    
+    final name = _generateBotName(seed);
+    final parts = name.split(' ');
+    final firstName = parts[0].toLowerCase();
+    final lastInitial = parts[1][0].toLowerCase();
+    final handle = '@${firstName}_$lastInitial';
+    
+    _botHandleCache[seed] = handle;
+    return handle;
+  }
 
   InMemoryPostRepository()
       : _posts = [
+          // Posts from our chapter
           Post(
             id: '1',
             handle: '@fbla_president',
             displayName: 'Sarah Johnson',
+            userId: 'bot_sarah_johnson',
             dateLabel: 'Nov 1',
             title: 'Nationals Prep Meeting Tomorrow!',
             body:
@@ -246,10 +288,26 @@ class InMemoryPostRepository extends PostRepository {
               ),
             ],
           ),
+          // Post from California chapter
+          Post(
+            id: 'ca_1',
+            handle: '@sfhs_fbla',
+            displayName: 'San Francisco HS FBLA',
+            userId: 'bot_sfhs_fbla',
+            dateLabel: 'Nov 3',
+            title: 'We Won Best Chapter Award! 🏆',
+            body:
+                'Huge congratulations to our chapter for winning the Best Chapter Award at the Northern California Regional Conference! Thank you to everyone who contributed to this achievement. Let\'s keep up the momentum!',
+            imageUrl: null,
+            likes: 156,
+            tags: ['Awards', 'Regional', 'Chapter News'],
+            comments: [],
+          ),
           Post(
             id: '2',
             handle: '@community_service',
             displayName: 'Emily Rodriguez',
+            userId: 'bot_emily_rodriguez',
             dateLabel: 'Oct 28',
             title: 'Community Service Hours Update',
             body:
@@ -259,10 +317,26 @@ class InMemoryPostRepository extends PostRepository {
             tags: ['Community Service', 'Chapter News'],
             comments: [],
           ),
+          // Post from Texas chapter
+          Post(
+            id: 'tx_1',
+            handle: '@austin_fbla',
+            displayName: 'Austin West FBLA',
+            userId: 'bot_austin_fbla',
+            dateLabel: 'Nov 2',
+            title: 'Entrepreneurship Workshop This Weekend',
+            body:
+                'Excited to announce that we\'re hosting a free entrepreneurship workshop featuring guest speakers from local startups! Saturday 10 AM at the library. Open to all FBLA members in the Austin area. RSVP in comments!',
+            imageUrl: null,
+            likes: 89,
+            tags: ['Workshop', 'Entrepreneurship', 'Regional Event'],
+            comments: [],
+          ),
           Post(
             id: '3',
             handle: '@events_coordinator',
             displayName: 'Jordan Miller',
+            userId: 'bot_jordan_miller',
             dateLabel: 'Oct 30',
             title: 'Which fundraiser should we do next?',
             body:
@@ -289,6 +363,20 @@ class InMemoryPostRepository extends PostRepository {
               ),
             ],
           ),
+          // Post from New York chapter
+          Post(
+            id: 'ny_1',
+            handle: '@nychs_fbla',
+            displayName: 'NYC Central HS FBLA',
+            dateLabel: 'Oct 29',
+            title: 'Finance Competition Tips Thread',
+            body:
+                'For everyone preparing for finance competitions, here are my top tips: 1) Know your ratios cold 2) Practice time management 3) Read WSJ daily 4) Form study groups. What other tips do you have?',
+            imageUrl: null,
+            likes: 203,
+            tags: ['Competitions', 'Finance', 'Study Tips'],
+            comments: [],
+          ),
           Post(
             id: '4',
             handle: '@competition_team',
@@ -300,6 +388,34 @@ class InMemoryPostRepository extends PostRepository {
             imageUrl: null,
             likes: 15,
             tags: ['Competitions', 'Business Ethics', 'State'],
+            comments: [],
+          ),
+          // Post from Florida chapter
+          Post(
+            id: 'fl_1',
+            handle: '@miami_fbla',
+            displayName: 'Miami Lakes FBLA',
+            dateLabel: 'Oct 27',
+            title: 'Thank You To Our Sponsors! 💙',
+            body:
+                'A huge thank you to local businesses who sponsored our chapter this year: TechStart Inc, Miami Business Solutions, and Garcia & Associates. Your support makes everything we do possible!',
+            imageUrl: null,
+            likes: 67,
+            tags: ['Sponsors', 'Thank You', 'Chapter News'],
+            comments: [],
+          ),
+          // Post from Illinois chapter
+          Post(
+            id: 'il_1',
+            handle: '@chicago_fbla',
+            displayName: 'Chicago North FBLA',
+            dateLabel: 'Oct 26',
+            title: 'Networking Event Success! 🤝',
+            body:
+                'Last night\'s networking event with local business professionals was incredible! Over 50 professionals attended and our members made amazing connections. Already planning the next one!',
+            imageUrl: null,
+            likes: 142,
+            tags: ['Networking', 'Professional Development', 'Events'],
             comments: [],
           ),
         ];
@@ -484,9 +600,17 @@ class InMemoryPostRepository extends PostRepository {
 
   @override
   void updateUserInfo(String userId, String newHandle, String newDisplayName, String? profileImagePath) {
+    print('DEBUG PostRepo: updateUserInfo called');
+    print('DEBUG PostRepo: userId: $userId');
+    print('DEBUG PostRepo: newHandle: $newHandle');
+    print('DEBUG PostRepo: newDisplayName: $newDisplayName');
+    print('DEBUG PostRepo: profileImagePath: $profileImagePath');
+    
+    int updatedPostCount = 0;
     // Update all posts by this user
     for (final post in _posts) {
       if (post.userId == userId) {
+        print('DEBUG PostRepo: Found post by user: ${post.id}');
         // Create a new post with updated info
         final updatedPost = Post(
           id: post.id,
@@ -508,12 +632,15 @@ class InMemoryPostRepository extends PostRepository {
         final idx = _posts.indexWhere((p) => p.id == post.id);
         if (idx != -1) {
           _posts[idx] = updatedPost;
+          updatedPostCount++;
+          print('DEBUG PostRepo: Updated post at index $idx with profileImagePath: ${updatedPost.profileImagePath}');
         }
       }
       
       // Update all comments and replies by this user in all posts
       _updateCommentsRecursively(post.comments, userId, newHandle, newDisplayName, profileImagePath);
     }
+    print('DEBUG PostRepo: Updated $updatedPostCount posts total');
     notifyListeners();
   }
 
@@ -667,14 +794,16 @@ class InMemoryPostRepository extends PostRepository {
         await Future.delayed(Duration(seconds: delaySeconds));
         
         final commentIndex = random.nextInt(genericComments.length);
-        final botIndex = random.nextInt(_botNames.length);
+        final botSeed = random.nextInt(100000);
+        final botName = _generateBotName(botSeed);
+        final botHandle = _generateBotHandle(botSeed);
         
         final comment = Comment(
-          authorHandle: _botHandles[botIndex],
-          authorName: _botNames[botIndex],
+          authorHandle: botHandle,
+          authorName: botName,
           text: genericComments[commentIndex],
           dateLabel: 'Just now',
-          userId: 'bot_user_$botIndex',
+          userId: 'bot_user_$botSeed',
         );
         
         // Find the post in the list and add the comment
@@ -694,8 +823,8 @@ class InMemoryPostRepository extends PostRepository {
               type: NotificationType.comment,
               postId: _posts[idx].id,
               postTitle: postTitle,
-              actorName: _botNames[botIndex],
-              actorHandle: _botHandles[botIndex],
+              actorName: botName,
+              actorHandle: botHandle,
               timestamp: DateTime.now(),
               commentText: genericComments[commentIndex],
               isRead: false,
@@ -732,7 +861,9 @@ class InMemoryPostRepository extends PostRepository {
         
         // Create notification for bot like
         if (_posts[idx].userId != null && _notificationRepo != null) {
-          final botIndex = random.nextInt(_botNames.length);
+          final botSeed = random.nextInt(100000);
+          final botName = _generateBotName(botSeed);
+          final botHandle = _generateBotHandle(botSeed);
           final postPreview = _posts[idx].title.isNotEmpty ? _posts[idx].title : _posts[idx].body;
           final postTitle = postPreview.length > 50 ? '${postPreview.substring(0, 50)}...' : postPreview;
           
@@ -742,8 +873,8 @@ class InMemoryPostRepository extends PostRepository {
               type: NotificationType.like,
               postId: _posts[idx].id,
               postTitle: postTitle,
-              actorName: _botNames[botIndex],
-              actorHandle: _botHandles[botIndex],
+              actorName: botName,
+              actorHandle: botHandle,
               timestamp: DateTime.now(),
               isRead: false,
             ),
@@ -769,7 +900,9 @@ class InMemoryPostRepository extends PostRepository {
     _posts[idx].likes++;
     notifyListeners(); // Update UI immediately
     
-    final botIndex = random.nextInt(_botNames.length);
+    final botSeed = random.nextInt(100000);
+    final botName = _generateBotName(botSeed);
+    final botHandle = _generateBotHandle(botSeed);
     
     // Create notification for guaranteed like
     if (_posts[idx].userId != null && _notificationRepo != null) {
@@ -782,8 +915,8 @@ class InMemoryPostRepository extends PostRepository {
           type: NotificationType.like,
           postId: _posts[idx].id,
           postTitle: postTitle,
-          actorName: _botNames[botIndex],
-          actorHandle: _botHandles[botIndex],
+          actorName: botName,
+          actorHandle: botHandle,
           timestamp: DateTime.now(),
           isRead: false,
         ),
@@ -808,14 +941,16 @@ class InMemoryPostRepository extends PostRepository {
     ];
     
     final commentIndex = random.nextInt(genericComments.length);
-    final commentBotIndex = random.nextInt(_botNames.length);
+    final commentBotSeed = random.nextInt(100000);
+    final commentBotName = _generateBotName(commentBotSeed);
+    final commentBotHandle = _generateBotHandle(commentBotSeed);
     
     final comment = Comment(
-      authorHandle: _botHandles[commentBotIndex],
-      authorName: _botNames[commentBotIndex],
+      authorHandle: commentBotHandle,
+      authorName: commentBotName,
       text: genericComments[commentIndex],
       dateLabel: 'Just now',
-      userId: 'bot_user_$commentBotIndex',
+      userId: 'bot_user_$commentBotSeed',
     );
     
     // Add comment to the post in the list
@@ -835,8 +970,8 @@ class InMemoryPostRepository extends PostRepository {
           type: NotificationType.comment,
           postId: _posts[commentIdx].id,
           postTitle: postTitle,
-          actorName: _botNames[commentBotIndex],
-          actorHandle: _botHandles[commentBotIndex],
+          actorName: commentBotName,
+          actorHandle: commentBotHandle,
           timestamp: DateTime.now(),
           commentText: genericComments[commentIndex],
           isRead: false,
@@ -912,5 +1047,138 @@ class InMemoryPostRepository extends PostRepository {
   @override
   bool isPostHidden(String postId, String userId) {
     return _hiddenPostIds.contains(postId);
+  }
+
+  // Static bot profiles data for quick access
+  static final Map<String, Map<String, String>> _botProfiles = {
+      // Jersey Village HS bots (our chapter)
+      'bot_sarah_johnson': {
+        'displayName': 'Sarah Johnson',
+        'username': 'fbla_president',
+        'bio': 'FBLA President | Passionate about leadership and business education | Nationals bound! 🏆',
+        'event': 'Business Presentation',
+        'chapter': 'Jersey Village HS',
+        'grade': '12',
+      },
+      'bot_alex_chen': {
+        'displayName': 'Alex Chen',
+        'username': 'marketing_lead',
+        'bio': 'Marketing enthusiast | Love creating campaigns that make a difference | Coffee addict ☕',
+        'event': 'Marketing',
+        'chapter': 'Jersey Village HS',
+        'grade': '11',
+      },
+      'bot_marcus_davis': {
+        'displayName': 'Marcus Davis',
+        'username': 'finance_officer',
+        'bio': 'Numbers never lie! Finance Officer passionate about accounting and financial literacy',
+        'event': 'Accounting',
+        'chapter': 'Jersey Village HS',
+        'grade': '12',
+      },
+      'bot_emily_rodriguez': {
+        'displayName': 'Emily Rodriguez',
+        'username': 'community_service',
+        'bio': 'Community Service Chair | Believe in giving back | Making our community better one project at a time',
+        'event': 'Community Service Project',
+        'chapter': 'Jersey Village HS',
+        'grade': '10',
+      },
+      'bot_jordan_miller': {
+        'displayName': 'Jordan Miller',
+        'username': 'events_coordinator',
+        'bio': 'Events Coordinator | Planning the best FBLA activities | Making memories together',
+        'event': 'Event Planning',
+        'chapter': 'Jersey Village HS',
+        'grade': '11',
+      },
+      
+      // California chapter bots
+      'bot_sfhs_fbla': {
+        'displayName': 'San Francisco HS FBLA',
+        'username': 'sfhs_fbla',
+        'bio': 'Official SFHS FBLA account | Best Chapter Award winners | Representing the Bay Area 🌉',
+        'event': 'Chapter Activities',
+        'chapter': 'San Francisco HS',
+        'grade': 'Grad',
+      },
+      'bot_jessica_wong': {
+        'displayName': 'Jessica Wong',
+        'username': 'jessica_wong_ca',
+        'bio': 'Tech enthusiast from SF | Building the future one line of code at a time | Future entrepreneur 💻',
+        'event': 'Website Design',
+        'chapter': 'San Francisco HS',
+        'grade': '11',
+      },
+      
+      // Texas chapter bots
+      'bot_austin_fbla': {
+        'displayName': 'Austin West FBLA',
+        'username': 'austin_fbla',
+        'bio': 'Official Austin West FBLA | Connecting Texas entrepreneurs | Keep Austin entrepreneurial! 🤠',
+        'event': 'Entrepreneurship',
+        'chapter': 'Austin West HS',
+        'grade': 'Grad',
+      },
+      'bot_tyler_brooks': {
+        'displayName': 'Tyler Brooks',
+        'username': 'tyler_b_texas',
+        'bio': 'Business management major in the making | Texas FBLA proud | Longhorns fan 🤘',
+        'event': 'Business Management',
+        'chapter': 'Austin West HS',
+        'grade': '12',
+      },
+      
+      // New York chapter bots
+      'bot_madison_taylor': {
+        'displayName': 'Madison Taylor',
+        'username': 'madison_t_ny',
+        'bio': 'NYC FBLA member | Economics nerd | Wall Street dreamer | Columbia bound 📈',
+        'event': 'Economics',
+        'chapter': 'Manhattan High',
+        'grade': '12',
+      },
+      
+      // System bot
+      'fbla_bot_system': {
+        'displayName': 'FBLA Helper Bot',
+        'username': 'fbla_helper',
+        'bio': 'Official FBLA community assistant | Here to help you succeed | Future Business Leaders! 🤖',
+        'event': 'Chapter Activities',
+        'chapter': 'National FBLA',
+        'grade': 'Grad',
+      },
+    };
+  
+  /// Get bot profile data by userId
+  static Map<String, String>? getBotProfile(String userId) {
+    return _botProfiles[userId];
+  }
+
+  /// Seed bot profile data to Firebase (optional - for persistence)
+  Future<void> seedBotProfiles() async {
+    final firebaseService = FirebaseUserService();
+
+    // Save each bot profile to Firebase
+    for (final entry in _botProfiles.entries) {
+      final userId = entry.key;
+      final data = entry.value;
+      
+      try {
+        await firebaseService.saveUserProfile(
+          userId: userId,
+          displayName: data['displayName']!,
+          email: '$userId@fbla-bot.local',
+          username: data['username'],
+          bio: data['bio'],
+          event: data['event'],
+          chapter: data['chapter'],
+          grade: data['grade'],
+        );
+        print('✓ Seeded profile for ${data['displayName']}');
+      } catch (e) {
+        print('✗ Error seeding ${data['displayName']}: $e');
+      }
+    }
   }
 }

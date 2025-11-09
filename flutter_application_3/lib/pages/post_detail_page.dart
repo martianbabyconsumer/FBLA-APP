@@ -6,6 +6,7 @@ import '../providers/user_provider.dart';
 import '../providers/auth_service.dart';
 import '../providers/app_settings_provider.dart';
 import '../repository/post_repository.dart';
+import 'member_profile_page.dart';
 
 // Post detail page to view/add comments. Returns updated Post when popping.
 class PostDetailPage extends StatefulWidget {
@@ -187,16 +188,58 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 children: [
                   // Profile picture - show stored profile image from post
                   Builder(builder: (context) {
-                    if (!kIsWeb && _post.profileImagePath != null && _post.profileImagePath!.isNotEmpty) {
+                    final hasProfileImage = _post.profileImagePath != null && _post.profileImagePath!.isNotEmpty;
+                    final isBlobUrl = hasProfileImage && _post.profileImagePath!.startsWith('blob:');
+                    final useNetworkImage = kIsWeb || isBlobUrl;
+
+                    if (hasProfileImage && useNetworkImage) {
+                      // Use Image.network for web blob URLs
                       return ClipOval(
-                        child: Image.file(
-                          File(_post.profileImagePath!),
-                          key: ObjectKey(_post),
+                        child: Image.network(
+                          _post.profileImagePath!,
+                          key: ValueKey('${_post.profileImagePath}_${_post.userId}'),
                           width: 48,
                           height: 48,
                           fit: BoxFit.cover,
+                          gaplessPlayback: false,
                           errorBuilder: (context, error, stackTrace) {
-                            // If image fails to load, show default avatar
+                            return ClipOval(
+                              child: Image.asset(
+                                'assets/images/feffe.webp',
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surfaceContainerHighest,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 30,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    } else if (hasProfileImage) {
+                      // Use Image.file for mobile file paths
+                      return ClipOval(
+                        child: Image.file(
+                          File(_post.profileImagePath!),
+                          key: ValueKey('${_post.profileImagePath}_${_post.userId}'),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: false,
+                          errorBuilder: (context, error, stackTrace) {
                             return ClipOval(
                               child: Image.asset(
                                 'assets/images/feffe.webp',
@@ -383,66 +426,119 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             children: [
                               ListTile(
                                 leading: Builder(builder: (context) {
-                                  if (!kIsWeb && c.profileImagePath != null && c.profileImagePath!.isNotEmpty) {
-                                    return ClipOval(
-                                      child: Image.file(
-                                        File(c.profileImagePath!),
-                                        key: ObjectKey(c),
-                                        width: 40,
-                                        height: 40,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return ClipOval(
-                                            child: Image.asset(
-                                              'assets/images/feffe.webp',
+                                  final profileImagePath = c.profileImagePath;
+                                  final isWebBlob = kIsWeb || (profileImagePath != null && profileImagePath.startsWith('blob:'));
+                                  final authService = context.read<AuthService>();
+                                  final isOwnComment = c.userId == authService.user?.uid;
+                                  
+                                  final profileWidget = profileImagePath != null && profileImagePath.isNotEmpty
+                                    ? ClipOval(
+                                        child: isWebBlob
+                                          ? Image.network(
+                                              profileImagePath,
+                                              key: ValueKey('${profileImagePath}_${c.userId}'),
                                               width: 40,
                                               height: 40,
                                               fit: BoxFit.cover,
+                                              gaplessPlayback: false,
                                               errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  width: 40,
-                                                  height: 40,
-                                                  decoration: BoxDecoration(
-                                                    color: theme.colorScheme.surfaceContainerHighest,
-                                                    shape: BoxShape.circle,
+                                                return ClipOval(
+                                                  child: Image.asset(
+                                                    'assets/images/feffe.webp',
+                                                    width: 40,
+                                                    height: 40,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context, error, stackTrace) {
+                                                      return Container(
+                                                        width: 40,
+                                                        height: 40,
+                                                        decoration: BoxDecoration(
+                                                          color: theme.colorScheme.surfaceContainerHighest,
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.person,
+                                                          size: 25,
+                                                          color: theme.colorScheme.onSurfaceVariant,
+                                                        ),
+                                                      );
+                                                    },
                                                   ),
-                                                  child: Icon(
-                                                    Icons.person,
-                                                    size: 25,
-                                                    color: theme.colorScheme.onSurfaceVariant,
+                                                );
+                                              },
+                                            )
+                                          : Image.file(
+                                              File(profileImagePath),
+                                              key: ValueKey('${profileImagePath}_${c.userId}'),
+                                              width: 40,
+                                              height: 40,
+                                              fit: BoxFit.cover,
+                                              gaplessPlayback: false,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return ClipOval(
+                                                  child: Image.asset(
+                                                    'assets/images/feffe.webp',
+                                                    width: 40,
+                                                    height: 40,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context, error, stackTrace) {
+                                                      return Container(
+                                                        width: 40,
+                                                        height: 40,
+                                                        decoration: BoxDecoration(
+                                                          color: theme.colorScheme.surfaceContainerHighest,
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.person,
+                                                          size: 25,
+                                                          color: theme.colorScheme.onSurfaceVariant,
+                                                        ),
+                                                      );
+                                                    },
                                                   ),
                                                 );
                                               },
                                             ),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  } else {
-                                    return ClipOval(
-                                      child: Image.asset(
-                                        'assets/images/feffe.webp',
-                                        width: 40,
-                                        height: 40,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            width: 40,
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.surfaceContainerHighest,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.person,
-                                              size: 25,
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  }
+                                      )
+                                    : ClipOval(
+                                        child: Image.asset(
+                                          'assets/images/feffe.webp',
+                                          width: 40,
+                                          height: 40,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              width: 40,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.surfaceContainerHighest,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                Icons.person,
+                                                size: 25,
+                                                color: theme.colorScheme.onSurfaceVariant,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      );
+
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => MemberProfilePage(
+                                            userId: c.userId ?? '',
+                                            isOwnProfile: isOwnComment,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: profileWidget,
+                                  );
                                 }),
                                 title: Row(
                                   children: [
@@ -502,66 +598,119 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                         .map((reply) => ListTile(
                                               dense: true,
                                               leading: Builder(builder: (context) {
-                                                if (!kIsWeb && reply.profileImagePath != null && reply.profileImagePath!.isNotEmpty) {
-                                                  return ClipOval(
-                                                    child: Image.file(
-                                                      File(reply.profileImagePath!),
-                                                      key: ObjectKey(reply),
-                                                      width: 32,
-                                                      height: 32,
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) {
-                                                        return ClipOval(
-                                                          child: Image.asset(
-                                                            'assets/images/feffe.webp',
+                                                final profileImagePath = reply.profileImagePath;
+                                                final isWebBlob = kIsWeb || (profileImagePath != null && profileImagePath.startsWith('blob:'));
+                                                final authService = context.read<AuthService>();
+                                                final isOwnReply = reply.userId == authService.user?.uid;
+                                                
+                                                final replyProfileWidget = profileImagePath != null && profileImagePath.isNotEmpty
+                                                  ? ClipOval(
+                                                      child: isWebBlob
+                                                        ? Image.network(
+                                                            profileImagePath,
+                                                            key: ValueKey('${profileImagePath}_${reply.userId}'),
                                                             width: 32,
                                                             height: 32,
                                                             fit: BoxFit.cover,
+                                                            gaplessPlayback: false,
                                                             errorBuilder: (context, error, stackTrace) {
-                                                              return Container(
-                                                                width: 32,
-                                                                height: 32,
-                                                                decoration: BoxDecoration(
-                                                                  color: theme.colorScheme.surfaceContainerHighest,
-                                                                  shape: BoxShape.circle,
+                                                              return ClipOval(
+                                                                child: Image.asset(
+                                                                  'assets/images/feffe.webp',
+                                                                  width: 32,
+                                                                  height: 32,
+                                                                  fit: BoxFit.cover,
+                                                                  errorBuilder: (context, error, stackTrace) {
+                                                                    return Container(
+                                                                      width: 32,
+                                                                      height: 32,
+                                                                      decoration: BoxDecoration(
+                                                                        color: theme.colorScheme.surfaceContainerHighest,
+                                                                        shape: BoxShape.circle,
+                                                                      ),
+                                                                      child: Icon(
+                                                                        Icons.person,
+                                                                        size: 20,
+                                                                        color: theme.colorScheme.onSurfaceVariant,
+                                                                      ),
+                                                                    );
+                                                                  },
                                                                 ),
-                                                                child: Icon(
-                                                                  Icons.person,
-                                                                  size: 20,
-                                                                  color: theme.colorScheme.onSurfaceVariant,
+                                                              );
+                                                            },
+                                                          )
+                                                        : Image.file(
+                                                            File(profileImagePath),
+                                                            key: ValueKey('${profileImagePath}_${reply.userId}'),
+                                                            width: 32,
+                                                            height: 32,
+                                                            fit: BoxFit.cover,
+                                                            gaplessPlayback: false,
+                                                            errorBuilder: (context, error, stackTrace) {
+                                                              return ClipOval(
+                                                                child: Image.asset(
+                                                                  'assets/images/feffe.webp',
+                                                                  width: 32,
+                                                                  height: 32,
+                                                                  fit: BoxFit.cover,
+                                                                  errorBuilder: (context, error, stackTrace) {
+                                                                    return Container(
+                                                                      width: 32,
+                                                                      height: 32,
+                                                                      decoration: BoxDecoration(
+                                                                        color: theme.colorScheme.surfaceContainerHighest,
+                                                                        shape: BoxShape.circle,
+                                                                      ),
+                                                                      child: Icon(
+                                                                        Icons.person,
+                                                                        size: 20,
+                                                                        color: theme.colorScheme.onSurfaceVariant,
+                                                                      ),
+                                                                    );
+                                                                  },
                                                                 ),
                                                               );
                                                             },
                                                           ),
-                                                        );
-                                                      },
-                                                    ),
-                                                  );
-                                                } else {
-                                                  return ClipOval(
-                                                    child: Image.asset(
-                                                      'assets/images/feffe.webp',
-                                                      width: 32,
-                                                      height: 32,
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) {
-                                                        return Container(
-                                                          width: 32,
-                                                          height: 32,
-                                                          decoration: BoxDecoration(
-                                                            color: theme.colorScheme.surfaceContainerHighest,
-                                                            shape: BoxShape.circle,
-                                                          ),
-                                                          child: Icon(
-                                                            Icons.person,
-                                                            size: 20,
-                                                            color: theme.colorScheme.onSurfaceVariant,
-                                                          ),
-                                                        );
-                                                      },
-                                                    ),
-                                                  );
-                                                }
+                                                    )
+                                                  : ClipOval(
+                                                      child: Image.asset(
+                                                        'assets/images/feffe.webp',
+                                                        width: 32,
+                                                        height: 32,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (context, error, stackTrace) {
+                                                          return Container(
+                                                            width: 32,
+                                                            height: 32,
+                                                            decoration: BoxDecoration(
+                                                              color: theme.colorScheme.surfaceContainerHighest,
+                                                              shape: BoxShape.circle,
+                                                            ),
+                                                            child: Icon(
+                                                              Icons.person,
+                                                              size: 20,
+                                                              color: theme.colorScheme.onSurfaceVariant,
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    );
+
+                                                return GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => MemberProfilePage(
+                                                          userId: reply.userId ?? '',
+                                                          isOwnProfile: isOwnReply,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: replyProfileWidget,
+                                                );
                                               }),
                                               title: Row(
                                                 children: [

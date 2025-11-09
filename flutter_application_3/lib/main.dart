@@ -39,6 +39,9 @@ Future<void> main() async {
   
   // Inject notification repository into post repository
   postRepo.setNotificationRepository(notificationRepo);
+  
+  // Seed bot profiles to Firebase
+  postRepo.seedBotProfiles();
 
   runApp(MultiProvider(
     providers: [

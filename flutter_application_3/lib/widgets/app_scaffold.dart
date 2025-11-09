@@ -67,17 +67,25 @@ class _AppScaffoldState extends State<AppScaffold> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/images/bee_logo_white.png',
-              height: 48,
-              width: 48,
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(
-                  Icons.hexagon,
-                  size: 48,
-                  color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
-                );
-              },
+            ColorFiltered(
+              colorFilter: const ColorFilter.matrix([
+                1.2, 0, 0, 0, 0, // Red channel (increase contrast)
+                0, 1.2, 0, 0, 0, // Green channel
+                0, 0, 1.2, 0, 0, // Blue channel
+                0, 0, 0, 1, 0,   // Alpha channel
+              ]),
+              child: Image.asset(
+                'assets/images/bee_logo_white.png',
+                height: 48,
+                width: 48,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.hexagon,
+                    size: 48,
+                    color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
+                  );
+                },
+              ),
             ),
             const SizedBox(width: 8),
             Padding(

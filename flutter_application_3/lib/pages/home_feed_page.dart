@@ -84,6 +84,7 @@ class HomeFeedPage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       child: PostCard(
+                        key: ValueKey('${post.id}_${post.profileImagePath}_${post.displayName}'),
                         post: post,
                         onLike: () {
                           final settings = context.read<AppSettingsProvider>();

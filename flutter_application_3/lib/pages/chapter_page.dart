@@ -12,6 +12,7 @@ import '../repository/post_repository.dart';
 import '../widgets/post_card.dart';
 import '../pages/post_detail_page.dart';
 import '../pages/create_post_page.dart';
+import '../pages/member_profile_page.dart';
 import '../utils/page_transitions.dart';
 
 class ChapterPage extends StatefulWidget {
@@ -27,7 +28,6 @@ class _ChapterPageState extends State<ChapterPage> {
   late List<Channel> _channels;
   late Channel _selectedChannel;
   List<ChapterMessage> _messages = [];
-  bool _showEmojiPicker = false;
 
   // Calendar state
   late DateTime _focusedDay;
@@ -98,29 +98,204 @@ class _ChapterPageState extends State<ChapterPage> {
   }
 
   void _loadMessages() {
-    // In a real app, this would load messages from a backend
+    // Load messages based on selected channel
     final now = DateTime.now();
-    _messages = [
-      ChapterMessage(
-        id: '1',
-        authorId: 'advisor',
-        authorName: 'Chapter Advisor',
-        content:
-            '🎉 Welcome to our FBLA Chapter! This is our new communication platform. Please read the rules and guidelines pinned in the announcements channel.',
-        timestamp: now.subtract(const Duration(days: 1)),
-        type: MessageType.announcement,
-        isPinned: true,
-      ),
-      ChapterMessage(
-        id: '2',
-        authorId: 'president',
-        authorName: 'Chapter President',
-        content:
-            'Our next meeting will be on Friday at 3:30 PM in Room 201. We\'ll be discussing upcoming competition preparations!',
-        timestamp: now.subtract(const Duration(hours: 2)),
-        type: MessageType.eventNotification,
-      ),
-    ];
+    
+    // Different messages for each channel
+    switch (_selectedChannel.id) {
+      case 'announcements':
+        _messages = [
+          ChapterMessage(
+            id: '1',
+            authorId: 'advisor',
+            authorName: 'Chapter Advisor',
+            content: '🎉 Welcome to our FBLA Chapter! This is our communication hub for all chapter activities.',
+            timestamp: now.subtract(const Duration(days: 3)),
+            type: MessageType.announcement,
+            isPinned: true,
+          ),
+          ChapterMessage(
+            id: '2',
+            authorId: 'advisor',
+            authorName: 'Chapter Advisor',
+            content: '📢 IMPORTANT: Nationals registration deadline is December 15th. Please see me if you plan to compete!',
+            timestamp: now.subtract(const Duration(days: 2)),
+            type: MessageType.announcement,
+            isPinned: true,
+          ),
+          ChapterMessage(
+            id: '3',
+            authorId: 'president',
+            authorName: 'Sarah Johnson',
+            content: 'Chapter dues are due by November 30th. \$25 for the year. See treasurer for payment.',
+            timestamp: now.subtract(const Duration(days: 1)),
+            type: MessageType.announcement,
+          ),
+        ];
+        break;
+        
+      case 'general':
+        _messages = [
+          ChapterMessage(
+            id: '1',
+            authorId: 'president',
+            authorName: 'Sarah Johnson',
+            content: 'Hey everyone! Great meeting today. Can\'t wait to see you all at the next one! 🎉',
+            timestamp: now.subtract(const Duration(hours: 5)),
+          ),
+          ChapterMessage(
+            id: '2',
+            authorId: 'member1',
+            authorName: 'Alex Chen',
+            content: 'Does anyone have notes from the last meeting? I had to leave early.',
+            timestamp: now.subtract(const Duration(hours: 4)),
+          ),
+          ChapterMessage(
+            id: '3',
+            authorId: 'member2',
+            authorName: 'Marcus Davis',
+            content: 'I can send them to you! DM me.',
+            timestamp: now.subtract(const Duration(hours: 4)),
+          ),
+          ChapterMessage(
+            id: '4',
+            authorId: 'member3',
+            authorName: 'Emily Rodriguez',
+            content: 'Who\'s going to the regional conference next month? 🙋‍♀️',
+            timestamp: now.subtract(const Duration(hours: 2)),
+          ),
+          ChapterMessage(
+            id: '5',
+            authorId: 'vp',
+            authorName: 'Jordan Miller',
+            content: 'I am! Can\'t wait, it\'s going to be awesome!',
+            timestamp: now.subtract(const Duration(hours: 1)),
+          ),
+        ];
+        break;
+        
+      case 'events':
+        _messages = [
+          ChapterMessage(
+            id: '1',
+            authorId: 'vp',
+            authorName: 'Jordan Miller',
+            content: '📅 Next chapter meeting: Friday, November 15th at 3:30 PM in Room 204',
+            timestamp: now.subtract(const Duration(days: 2)),
+            type: MessageType.eventNotification,
+            isPinned: true,
+          ),
+          ChapterMessage(
+            id: '2',
+            authorId: 'treasurer',
+            authorName: 'Ryan Thompson',
+            content: '🎪 Fundraiser Car Wash this Saturday 9 AM - 2 PM at the school parking lot. All members please try to help out!',
+            timestamp: now.subtract(const Duration(days: 1)),
+            type: MessageType.eventNotification,
+          ),
+          ChapterMessage(
+            id: '3',
+            authorId: 'president',
+            authorName: 'Sarah Johnson',
+            content: 'Regional Leadership Conference is December 8-10 in Orlando. Sign-up sheet in room 201!',
+            timestamp: now.subtract(const Duration(hours: 12)),
+          ),
+          ChapterMessage(
+            id: '4',
+            authorId: 'member1',
+            authorName: 'Alex Chen',
+            content: 'Don\'t forget about the community service event at the food bank this weekend! We need volunteers.',
+            timestamp: now.subtract(const Duration(hours: 6)),
+          ),
+        ];
+        break;
+        
+      case 'competitions':
+        _messages = [
+          ChapterMessage(
+            id: '1',
+            authorId: 'advisor',
+            authorName: 'Chapter Advisor',
+            content: '🏆 Competition categories for Nationals are now available. Check the FBLA website and let me know which events interest you!',
+            timestamp: now.subtract(const Duration(days: 3)),
+            isPinned: true,
+          ),
+          ChapterMessage(
+            id: '2',
+            authorId: 'member2',
+            authorName: 'Marcus Davis',
+            content: 'I\'m thinking about doing Business Financial Plan. Anyone want to team up?',
+            timestamp: now.subtract(const Duration(days: 1)),
+          ),
+          ChapterMessage(
+            id: '3',
+            authorId: 'member3',
+            authorName: 'Emily Rodriguez',
+            content: 'I\'ll partner with you! We should start planning soon.',
+            timestamp: now.subtract(const Duration(hours: 20)),
+          ),
+          ChapterMessage(
+            id: '4',
+            authorId: 'president',
+            authorName: 'Sarah Johnson',
+            content: 'Practice sessions will be held every Wednesday after school. Show up to work on your presentations!',
+            timestamp: now.subtract(const Duration(hours: 10)),
+          ),
+          ChapterMessage(
+            id: '5',
+            authorId: 'vp',
+            authorName: 'Jordan Miller',
+            content: 'For those doing testing events, I have study guides from last year. Come see me.',
+            timestamp: now.subtract(const Duration(hours: 5)),
+          ),
+        ];
+        break;
+        
+      case 'resources':
+        _messages = [
+          ChapterMessage(
+            id: '1',
+            authorId: 'advisor',
+            authorName: 'Chapter Advisor',
+            content: '📚 STUDY RESOURCES\n\n🔗 FBLA Competitive Events: https://www.fbla.org/compete\n🔗 Practice Tests: https://www.fbla.org/test-prep\n🔗 Business Plan Templates: https://www.fbla.org/business-plan',
+            timestamp: now.subtract(const Duration(days: 7)),
+            isPinned: true,
+          ),
+          ChapterMessage(
+            id: '2',
+            authorId: 'advisor',
+            authorName: 'Chapter Advisor',
+            content: '💡 HELPFUL TIPS\n\n• Start preparing early for competitions\n• Practice your presentations in front of others\n• Review past test questions\n• Network with other chapter members',
+            timestamp: now.subtract(const Duration(days: 6)),
+            isPinned: true,
+          ),
+          ChapterMessage(
+            id: '3',
+            authorId: 'member2',
+            authorName: 'Marcus Davis',
+            content: 'I found this great YouTube channel for business concepts: "Business Basics Explained" - really helpful for Economics test prep!',
+            timestamp: now.subtract(const Duration(days: 2)),
+          ),
+          ChapterMessage(
+            id: '4',
+            authorId: 'vp',
+            authorName: 'Jordan Miller',
+            content: 'Quizlet has tons of FBLA flashcard sets. Search "FBLA [your event name]" and you\'ll find study sets.',
+            timestamp: now.subtract(const Duration(hours: 36)),
+          ),
+          ChapterMessage(
+            id: '5',
+            authorId: 'member3',
+            authorName: 'Emily Rodriguez',
+            content: '📖 Recommended Books:\n• "The Lean Startup" by Eric Ries\n• "How to Win Friends and Influence People" by Dale Carnegie\n• "Think and Grow Rich" by Napoleon Hill',
+            timestamp: now.subtract(const Duration(hours: 12)),
+          ),
+        ];
+        break;
+        
+      default:
+        _messages = [];
+    }
   }
 
   void _sendMessage() {
@@ -372,31 +547,47 @@ class _ChapterPageState extends State<ChapterPage> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     children: _channels.map((channel) {
                       final isSelected = channel == _selectedChannel;
-                      return ListTile(
-                        leading: Icon(
-                          channel.icon,
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
                           color: isSelected
-                              ? theme.primaryColor
-                              : theme.unselectedWidgetColor,
+                              ? theme.brightness == Brightness.dark
+                                  ? theme.colorScheme.primary.withAlpha((0.25 * 255).round())
+                                  : theme.colorScheme.primary.withAlpha((0.1 * 255).round())
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        title: Text(
-                          '#${channel.name}',
-                          style: TextStyle(
+                        child: ListTile(
+                          leading: Icon(
+                            channel.icon,
                             color: isSelected
-                                ? theme.primaryColor
-                                : theme.colorScheme.onSurface
-                                    .withAlpha((0.8 * 255).round()),
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                                ? theme.brightness == Brightness.dark
+                                    ? theme.colorScheme.primary.withAlpha((0.9 * 255).round())
+                                    : theme.primaryColor
+                                : theme.unselectedWidgetColor,
                           ),
+                          title: Text(
+                            '#${channel.name}',
+                            style: TextStyle(
+                              color: isSelected
+                                  ? theme.brightness == Brightness.dark
+                                      ? theme.colorScheme.onSurface
+                                      : theme.primaryColor
+                                  : theme.colorScheme.onSurface
+                                      .withAlpha((0.8 * 255).round()),
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onTap: () {
+                            setState(() {
+                              _selectedChannel = channel;
+                              _loadMessages(); // Reload messages for the selected channel
+                            });
+                          },
                         ),
-                        selected: isSelected,
-                        onTap: () {
-                          setState(() {
-                            _selectedChannel = channel;
-                          });
-                        },
                       );
                     }).toList(),
                   ),
@@ -455,17 +646,20 @@ class _ChapterPageState extends State<ChapterPage> {
                     ],
                   ),
                 ),
-                // Content area - show calendar, posts, or messages based on channel
+                // Content area - show calendar, posts, resources, or messages based on channel
                 Expanded(
                   child: _selectedChannel.id == 'chapter-calendar'
                       ? _buildCalendarView(theme)
                       : _selectedChannel.id == 'chapter-posts'
                         ? _buildPostsFeedView(theme)
-                        : _buildMessagesView(theme),
+                        : _selectedChannel.id == 'resources'
+                          ? _buildResourcesView(theme)
+                          : _buildMessagesView(theme),
                 ),
                 // Message input
                 if (!_selectedChannel.isLocked &&
-                    _selectedChannel.id != 'chapter-calendar')
+                    _selectedChannel.id != 'chapter-calendar' &&
+                    _selectedChannel.id != 'resources')
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -487,13 +681,6 @@ class _ChapterPageState extends State<ChapterPage> {
                     ),
                     child: Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () {
-                            // TODO: Implement file attachment
-                          },
-                          tooltip: 'Add attachment',
-                        ),
                         Expanded(
                           child: TextField(
                             controller: _messageController,
@@ -515,15 +702,7 @@ class _ChapterPageState extends State<ChapterPage> {
                             onSubmitted: (_) => _sendMessage(),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.emoji_emotions_outlined),
-                          onPressed: () {
-                            setState(() {
-                              _showEmojiPicker = !_showEmojiPicker;
-                            });
-                          },
-                          tooltip: 'Add emoji',
-                        ),
+                        const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.send),
                           onPressed: _sendMessage,
@@ -562,6 +741,15 @@ class _ChapterPageState extends State<ChapterPage> {
                       eventLoader: (day) =>
                           calendarProvider.getChapterEventsForDay(day),
                       startingDayOfWeek: StartingDayOfWeek.sunday,
+                      daysOfWeekHeight: 40,
+                      daysOfWeekStyle: DaysOfWeekStyle(
+                        weekdayStyle: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        weekendStyle: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
                       headerStyle: HeaderStyle(
                         formatButtonVisible: false,
                         titleCentered: true,
@@ -699,11 +887,26 @@ class _ChapterPageState extends State<ChapterPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    backgroundColor: theme.primaryColor,
-                    child: Text(
-                      message.authorName[0],
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
+                  GestureDetector(
+                    onTap: () {
+                      final authService = context.read<AuthService>();
+                      final isOwnMessage = message.authorId == authService.user?.uid;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MemberProfilePage(
+                            userId: message.authorId,
+                            isOwnProfile: isOwnMessage,
+                          ),
+                        ),
+                      );
+                    },
+                    child: CircleAvatar(
+                      backgroundColor: theme.primaryColor,
+                      child: Text(
+                        message.authorName[0],
+                        style: TextStyle(color: theme.colorScheme.onPrimary),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1087,10 +1290,463 @@ class _ChapterPageState extends State<ChapterPage> {
     );
   }
 
+  Widget _buildResourcesView(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Official FBLA Rules Section
+          _buildResourceSection(
+            theme: theme,
+            title: '📜 Official FBLA Rules & Guidelines',
+            icon: Icons.gavel,
+            iconColor: Colors.red,
+            resources: [
+              ResourceLink(
+                title: 'FBLA-PBL Bylaws',
+                url: 'https://www.fbla-pbl.org/bylaws',
+                description: 'Official organizational bylaws and governance',
+              ),
+              ResourceLink(
+                title: 'Competitive Events Guidelines',
+                url: 'https://www.fbla.org/compete/guidelines',
+                description: 'Rules and regulations for all competitive events',
+              ),
+              ResourceLink(
+                title: 'Code of Conduct',
+                url: 'https://www.fbla.org/code-of-conduct',
+                description: 'Expected behavior and professional standards',
+              ),
+              ResourceLink(
+                title: 'Dress Code Requirements',
+                url: 'https://www.fbla.org/dress-code',
+                description: 'Business attire guidelines for competitions',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Getting Started Section
+          _buildResourceSection(
+            theme: theme,
+            title: '🚀 Getting Started with FBLA',
+            icon: Icons.rocket_launch,
+            iconColor: Colors.blue,
+            resources: [
+              ResourceLink(
+                title: 'New Member Guide',
+                url: 'https://www.fbla.org/new-members',
+                description: 'Everything you need to know as a new member',
+              ),
+              ResourceLink(
+                title: 'How to Choose Your Event',
+                url: 'https://www.fbla.org/choose-event',
+                description: 'Find the perfect competitive event for your skills',
+              ),
+              ResourceLink(
+                title: 'FBLA Membership Benefits',
+                url: 'https://www.fbla.org/benefits',
+                description: 'Scholarships, networking, and career opportunities',
+              ),
+              ResourceLink(
+                title: 'Chapter Officer Handbook',
+                url: 'https://www.fbla.org/officers',
+                description: 'Resources for chapter leaders',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Business Plan Events
+          _buildResourceSection(
+            theme: theme,
+            title: '💼 Business Plan Events',
+            icon: Icons.business_center,
+            iconColor: Colors.green,
+            resources: [
+              ResourceLink(
+                title: 'Business Plan Template',
+                url: 'https://www.fbla.org/business-plan-template',
+                description: 'Official template and format guidelines',
+              ),
+              ResourceLink(
+                title: 'Sample Winning Business Plans',
+                url: 'https://www.fbla.org/sample-plans',
+                description: 'Examples from past national winners',
+              ),
+              ResourceLink(
+                title: 'Market Research Tools',
+                url: 'https://www.census.gov/data',
+                description: 'U.S. Census data for market analysis',
+              ),
+              ResourceLink(
+                title: 'Financial Projection Guide',
+                url: 'https://www.fbla.org/financial-projections',
+                description: 'Creating realistic financial forecasts',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Presentation Events
+          _buildResourceSection(
+            theme: theme,
+            title: '🎤 Presentation Events',
+            icon: Icons.co_present,
+            iconColor: Colors.purple,
+            resources: [
+              ResourceLink(
+                title: 'Presentation Skills Guide',
+                url: 'https://www.fbla.org/presentation-tips',
+                description: 'Tips for delivering effective presentations',
+              ),
+              ResourceLink(
+                title: 'PowerPoint Best Practices',
+                url: 'https://www.fbla.org/powerpoint-guide',
+                description: 'Creating professional slides',
+              ),
+              ResourceLink(
+                title: 'Public Speaking Resources',
+                url: 'https://www.toastmasters.org/resources',
+                description: 'Toastmasters public speaking tips',
+              ),
+              ResourceLink(
+                title: 'Video Presentation Tools',
+                url: 'https://www.canva.com/presentations',
+                description: 'Canva templates for visual presentations',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Testing Events
+          _buildResourceSection(
+            theme: theme,
+            title: '✍️ Testing Events',
+            icon: Icons.quiz,
+            iconColor: Colors.orange,
+            resources: [
+              ResourceLink(
+                title: 'Practice Tests Library',
+                url: 'https://www.fbla.org/practice-tests',
+                description: 'Official practice tests for all subjects',
+              ),
+              ResourceLink(
+                title: 'Economics Test Prep',
+                url: 'https://www.khanacademy.org/economics-finance-domain',
+                description: 'Khan Academy economics courses',
+              ),
+              ResourceLink(
+                title: 'Accounting Fundamentals',
+                url: 'https://www.accountingcoach.com',
+                description: 'Free accounting tutorials and practice',
+              ),
+              ResourceLink(
+                title: 'Business Math Review',
+                url: 'https://www.fbla.org/business-math',
+                description: 'Key formulas and practice problems',
+              ),
+              ResourceLink(
+                title: 'Quizlet FBLA Study Sets',
+                url: 'https://quizlet.com/subject/fbla',
+                description: 'Flashcards created by FBLA students',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Technology Events
+          _buildResourceSection(
+            theme: theme,
+            title: '💻 Technology & Coding Events',
+            icon: Icons.computer,
+            iconColor: Colors.cyan,
+            resources: [
+              ResourceLink(
+                title: 'Website Development Guide',
+                url: 'https://www.w3schools.com',
+                description: 'HTML, CSS, JavaScript tutorials',
+              ),
+              ResourceLink(
+                title: 'Mobile App Development',
+                url: 'https://developer.android.com/courses',
+                description: 'Android app development basics',
+              ),
+              ResourceLink(
+                title: 'Coding Challenge Practice',
+                url: 'https://www.codecademy.com',
+                description: 'Interactive coding lessons',
+              ),
+              ResourceLink(
+                title: 'Database Design Resources',
+                url: 'https://www.fbla.org/database-guide',
+                description: 'SQL and database management',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Study Resources
+          _buildResourceSection(
+            theme: theme,
+            title: '📚 Study Materials & Tools',
+            icon: Icons.school,
+            iconColor: Colors.indigo,
+            resources: [
+              ResourceLink(
+                title: 'FBLA Study Guide',
+                url: 'https://www.fbla.org/study-guide',
+                description: 'Comprehensive study materials',
+              ),
+              ResourceLink(
+                title: 'Business Terms Glossary',
+                url: 'https://www.fbla.org/glossary',
+                description: 'Key business terminology',
+              ),
+              ResourceLink(
+                title: 'YouTube: FBLA Test Prep',
+                url: 'https://www.youtube.com/results?search_query=fbla+test+prep',
+                description: 'Video tutorials and study tips',
+              ),
+              ResourceLink(
+                title: 'Study Group Finder',
+                url: 'https://www.fbla.org/study-groups',
+                description: 'Connect with other FBLA students',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Career Resources
+          _buildResourceSection(
+            theme: theme,
+            title: '🎯 Career Development',
+            icon: Icons.work,
+            iconColor: Colors.teal,
+            resources: [
+              ResourceLink(
+                title: 'Resume Building Guide',
+                url: 'https://www.fbla.org/resume-guide',
+                description: 'Create a professional resume',
+              ),
+              ResourceLink(
+                title: 'Interview Preparation',
+                url: 'https://www.fbla.org/interview-tips',
+                description: 'Common questions and best practices',
+              ),
+              ResourceLink(
+                title: 'LinkedIn Profile Tips',
+                url: 'https://www.linkedin.com/help/linkedin/answer/a542685',
+                description: 'Building your professional network',
+              ),
+              ResourceLink(
+                title: 'Internship Opportunities',
+                url: 'https://www.fbla.org/internships',
+                description: 'Find business internships',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Additional Resources
+          _buildResourceSection(
+            theme: theme,
+            title: '🔗 Additional Resources',
+            icon: Icons.link,
+            iconColor: Colors.brown,
+            resources: [
+              ResourceLink(
+                title: 'FBLA National Website',
+                url: 'https://www.fbla-pbl.org',
+                description: 'Main FBLA-PBL website',
+              ),
+              ResourceLink(
+                title: 'FBLA Connect',
+                url: 'https://connect.fbla.org',
+                description: 'Member networking platform',
+              ),
+              ResourceLink(
+                title: 'Scholarship Database',
+                url: 'https://www.fbla.org/scholarships',
+                description: 'FBLA scholarship opportunities',
+              ),
+              ResourceLink(
+                title: 'National Leadership Conference',
+                url: 'https://www.fbla.org/nlc',
+                description: 'Information about nationals',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildResourceSection({
+    required ThemeData theme,
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required List<ResourceLink> resources,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.dividerColor,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: iconColor, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Resource links
+          ...resources.asMap().entries.map((entry) {
+            final index = entry.key;
+            final resource = entry.value;
+            final isLast = index == resources.length - 1;
+            
+            return Column(
+              children: [
+                InkWell(
+                  onTap: () {
+                    // Open URL (you can use url_launcher package)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Opening: ${resource.title}'),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: iconColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.open_in_new,
+                            color: iconColor,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                resource.title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                resource.description,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                resource.url,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: theme.colorScheme.onSurface.withOpacity(0.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isLast)
+                  Divider(
+                    height: 1,
+                    indent: 72,
+                    color: theme.dividerColor,
+                  ),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
+}
+
+class ResourceLink {
+  final String title;
+  final String url;
+  final String description;
+
+  ResourceLink({
+    required this.title,
+    required this.url,
+    required this.description,
+  });
 }

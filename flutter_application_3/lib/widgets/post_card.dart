@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
 import '../repository/post_repository.dart';
 import '../providers/user_info_service.dart';
+import '../pages/member_profile_page.dart';
 import 'poll_widget.dart';
 
 class PostCard extends StatefulWidget {
@@ -64,6 +65,10 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
     final displayName = widget.post.displayName;
     final handle = widget.post.handle;
     final isOwnPost = userInfoService.isCurrentUser(widget.post.userId);
+    
+    print('DEBUG PostCard: Building post ${widget.post.id}');
+    print('DEBUG PostCard: profileImagePath = ${widget.post.profileImagePath}');
+    print('DEBUG PostCard: userId = ${widget.post.userId}');
 
     return Container(
       decoration: BoxDecoration(
@@ -95,68 +100,120 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                 // This ensures profile pictures stay consistent regardless of theme
                 // and update across all past posts when user changes their picture
                 Builder(builder: (context) {
-                  if (!kIsWeb && widget.post.profileImagePath != null && widget.post.profileImagePath!.isNotEmpty) {
-                    return ClipOval(
-                      child: Image.file(
-                        File(widget.post.profileImagePath!),
-                        key: ValueKey(widget.post.profileImagePath), // Use profileImagePath as key to force rebuild
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          // If image fails to load, show default avatar
-                          return ClipOval(
-                            child: Image.asset(
-                              'assets/images/feffe.webp',
+                  final profileWidget = widget.post.profileImagePath != null && widget.post.profileImagePath!.isNotEmpty
+                    ? (() {
+                        final isWebBlob = widget.post.profileImagePath!.startsWith('blob:');
+                        
+                        return ClipOval(
+                          child: kIsWeb || isWebBlob
+                            ? Image.network(
+                                widget.post.profileImagePath!,
+                                key: ValueKey('${widget.post.profileImagePath}_${widget.post.userId}'),
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // If image fails to load, show default avatar
+                                  return ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/feffe.webp',
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.surfaceContainerHighest,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.person,
+                                            size: 30,
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.file(
+                                File(widget.post.profileImagePath!),
+                                key: ValueKey('${widget.post.profileImagePath}_${widget.post.userId}'),
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                gaplessPlayback: false,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // If image fails to load, show default avatar
+                                  return ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/feffe.webp',
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.surfaceContainerHighest,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.person,
+                                            size: 30,
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                        );
+                      })()
+                    : ClipOval(
+                        child: Image.asset(
+                          'assets/images/feffe.webp',
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
                               width: 48,
                               height: 48,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceContainerHighest,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 30,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  } else {
-                    // Show default avatar for users without profile pictures
-                    return ClipOval(
-                      child: Image.asset(
-                        'assets/images/feffe.webp',
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.person,
-                              size: 30,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.person,
+                                size: 30,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            );
+                          },
+                        ),
+                      );
+
+                  // Wrap with GestureDetector to make clickable
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MemberProfilePage(
+                            userId: widget.post.userId ?? '',
+                            isOwnProfile: isOwnPost,
+                          ),
+                        ),
+                      );
+                    },
+                    child: profileWidget,
+                  );
                 }),
                 const SizedBox(width: 12),
                 Expanded(

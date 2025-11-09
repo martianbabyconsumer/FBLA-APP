@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_service.dart';
 import '../providers/user_provider.dart';
+import '../providers/app_settings_provider.dart';
 import 'signup_page.dart';
 import '../utils/page_transitions.dart';
 
@@ -46,9 +47,14 @@ class _LoginPageState extends State<LoginPage> {
     } else {
       // On successful login, sync UserProvider with Firebase user data
       final userProvider = context.read<UserProvider>();
+      final settingsProvider = context.read<AppSettingsProvider>();
       final user = authService.user;
       if (user != null) {
         try {
+          // Set user ID in providers to enable Firebase sync
+          userProvider.setUserId(user.uid);
+          settingsProvider.setUserId(user.uid);
+          
           // Load previously saved user data for this email (username, profile pic)
           if (user.email != null && user.email!.isNotEmpty) {
             await userProvider.loadUserDataForEmail(user.email!);
@@ -69,30 +75,94 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _resetPassword() async {
-    if (_emailController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email address')),
-      );
-      return;
-    }
+    final emailController = TextEditingController(text: _emailController.text.trim());
 
-    final authService = context.read<AuthService>();
-    final error = await authService.resetPassword(_emailController.text.trim());
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Reset Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter your email address to receive a password reset link:',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: const Text(
+                  'You will receive an email with a link to reset your password. Check your spam folder if you don\'t see it.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter your email')),
+                  );
+                  return;
+                }
 
-    if (!mounted) return;
+                // Send password reset email
+                final authService = context.read<AuthService>();
+                final error = await authService.resetPassword(email);
+                
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                  
+                  if (error == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Password reset email sent! Check your inbox.'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(error),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Send Reset Link'),
+            ),
+          ],
+        );
+      },
+    );
 
-    if (error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset email sent!')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
+    // Clean up controller
+    emailController.dispose();
   }
 
   @override
@@ -153,18 +223,33 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary,
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withOpacity(0.3),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(7.5), // Reduced further to make image 40% larger
-                      child: Image.asset(
-                        'assets/images/bee_logo_white.png',
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.hexagon,
-                            size: 126, // 90 * 1.4 = 126
-                            color: Colors.white,
-                          );
-                        },
+                      child: ColorFiltered(
+                        colorFilter: const ColorFilter.matrix([
+                          1.2, 0, 0, 0, 0, // Red channel (increase contrast)
+                          0, 1.2, 0, 0, 0, // Green channel
+                          0, 0, 1.2, 0, 0, // Blue channel
+                          0, 0, 0, 1, 0,   // Alpha channel
+                        ]),
+                        child: Image.asset(
+                          'assets/images/bee_logo_white.png',
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.hexagon,
+                              size: 126, // 90 * 1.4 = 126
+                              color: Colors.white,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),

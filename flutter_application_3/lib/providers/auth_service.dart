@@ -37,6 +37,10 @@ class AuthService extends ChangeNotifier {
 
       // Update display name
       await credential.user?.updateDisplayName(displayName);
+      
+      // Send email verification link
+      await credential.user?.sendEmailVerification();
+      
       await credential.user?.reload();
       _user = _auth.currentUser;
 
@@ -137,9 +141,8 @@ class AuthService extends ChangeNotifier {
       switch (e.code) {
         case 'user-not-found':
         case 'wrong-password':
-          return 'Either the username or password is wrong';
         case 'invalid-email':
-          return 'The email address is invalid.';
+          return 'Either the Email/Username or Password is wrong';
         case 'user-disabled':
           return 'This account has been disabled.';
         default:
@@ -176,6 +179,55 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  // Change password
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.email == null) {
+        return 'No user is currently signed in.';
+      }
+
+      // Re-authenticate user with current password
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      try {
+        await user.reauthenticateWithCredential(credential);
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'wrong-password') {
+          return 'Current password is incorrect.';
+        } else if (e.code == 'invalid-credential') {
+          return 'Current password is incorrect.';
+        }
+        return e.message ?? 'Failed to verify current password.';
+      }
+
+      // Update to new password
+      await user.updatePassword(newPassword);
+      
+      // Send email verification link after password change
+      await user.sendEmailVerification();
+      
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'weak-password':
+          return 'The new password is too weak. Please use at least 6 characters.';
+        case 'requires-recent-login':
+          return 'Please log out and log in again before changing your password.';
+        default:
+          return e.message ?? 'An error occurred while changing password.';
+      }
+    } catch (e) {
+      return 'An unexpected error occurred.';
+    }
+  }
+
   // Refresh user data and notify listeners
   Future<void> refreshUser() async {
     await _user?.reload();
@@ -188,4 +240,27 @@ class AuthService extends ChangeNotifier {
 
   // Get current user email
   String get email => _user?.email ?? '';
+  
+  // Check if user's email is verified
+  bool get isEmailVerified => _user?.emailVerified ?? false;
+  
+  // Resend verification email
+  Future<String?> resendVerificationEmail() async {
+    try {
+      if (_user == null) {
+        return 'No user is currently signed in.';
+      }
+      
+      if (_user!.emailVerified) {
+        return 'Email is already verified.';
+      }
+      
+      await _user!.sendEmailVerification();
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      return e.message ?? 'An error occurred.';
+    } catch (e) {
+      return 'An unexpected error occurred.';
+    }
+  }
 }

@@ -63,8 +63,187 @@ class _SignUpPageState extends State<SignUpPage> {
         // If saving settings fails, still continue
       }
       
-      // Navigate back to login or home
-      if (mounted) Navigator.pop(context);
+      // Show email verification dialog with auto-check
+      if (mounted) {
+        await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            // Start checking for email verification
+            Future.delayed(const Duration(seconds: 2)).then((_) async {
+              while (dialogContext.mounted) {
+                await authService.refreshUser();
+                if (authService.isEmailVerified) {
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop(true); // Close dialog with success
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Email verified successfully! 🎉'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                  break;
+                }
+                await Future.delayed(const Duration(seconds: 3));
+              }
+            });
+
+            return WillPopScope(
+              onWillPop: () async {
+                // Show confirmation dialog before allowing back navigation
+                final shouldExit = await showDialog<bool>(
+                  context: dialogContext,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Skip Verification?'),
+                    content: const Text(
+                      'Your email is not verified yet. You can verify it later from settings, but some features may be limited.\n\nAre you sure you want to skip?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Continue Waiting'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Skip Verification'),
+                      ),
+                    ],
+                  ),
+                );
+                return shouldExit ?? false;
+              },
+              child: AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.mark_email_read, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Verify Your Email'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'We\'ve sent a verification link to:',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _emailController.text.trim(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Next Steps:',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '• Check your email inbox\n'
+                            '• Click the verification link\n'
+                            '• This dialog will close automatically\n'
+                            '• Check spam/junk folder if not found',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Waiting for verification...',
+                          style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.lock, size: 16, color: Colors.orange.shade700),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'You must verify to continue. Use back button to skip.',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      // Resend verification email
+                      final error = await authService.resendVerificationEmail();
+                      if (dialogContext.mounted) {
+                        if (error == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Verification email sent! Check your inbox.'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(error)),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Resend Email'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+
+        // Only navigate back if user explicitly skipped or verified
+        if (mounted) {
+          Navigator.of(context).pop(); // Go back to login
+        }
+      }
     }
   }
 
