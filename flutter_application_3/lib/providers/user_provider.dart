@@ -31,10 +31,10 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> updateDisplayName(String name) async {
     final trimmed = name.trim();
+    if (!RegExp(r'[a-zA-Z]').hasMatch(trimmed)) throw FormatException('Display name needs to have at least 1 letter');
     if (trimmed.isEmpty) throw FormatException('Display name cannot be empty');
     if (trimmed.length < 2) throw FormatException('Display name must be at least 2 characters');
     if (trimmed.length > 50) throw FormatException('Display name must be 50 characters or less');
-    if (!RegExp(r'[a-zA-Z]').hasMatch(trimmed)) throw FormatException('Display name must contain at least one letter');
 
     _displayName = trimmed;
     final prefs = await SharedPreferences.getInstance();
@@ -65,15 +65,51 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateProfileImage(String? imagePath) async {
+  Future<void> updateProfileImage(String? imagePath, {String? userEmail}) async {
     _profileImagePath = imagePath;
     final prefs = await SharedPreferences.getInstance();
+    
+    // Save both with and without email key for backward compatibility
     if (imagePath != null) {
       await prefs.setString('profileImagePath', imagePath);
+      if (userEmail != null) {
+        await prefs.setString('profileImagePath:$userEmail', imagePath);
+      }
     } else {
       await prefs.remove('profileImagePath');
+      if (userEmail != null) {
+        await prefs.remove('profileImagePath:$userEmail');
+      }
     }
     notifyListeners();
+  }
+  
+  /// Load user data for a specific email (called after sign in)
+  Future<void> loadUserDataForEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Load saved profile image for this email (from SharedPreferences)
+    final savedProfileImage = prefs.getString('profileImagePath:$email');
+    if (savedProfileImage != null) {
+      _profileImagePath = savedProfileImage;
+      await prefs.setString('profileImagePath', savedProfileImage);
+    }
+    
+    // Load saved username (already stored globally)
+    _username = prefs.getString('username');
+    
+    notifyListeners();
+  }
+  
+  /// Update profile data from Firebase Auth user
+  void updateFromFirebaseUser(dynamic firebaseUser) {
+    if (firebaseUser != null) {
+      // Update profile image from Firebase photoURL if available
+      if (firebaseUser.photoURL != null && firebaseUser.photoURL!.isNotEmpty) {
+        _profileImagePath = firebaseUser.photoURL;
+      }
+      notifyListeners();
+    }
   }
 
   Future<void> saveSettings(String displayName, String email, {String? username}) async {

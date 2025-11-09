@@ -8,7 +8,9 @@ import 'providers/calendar_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/auth_service.dart';
 import 'providers/user_info_service.dart';
+import 'providers/app_settings_provider.dart';
 import 'repository/post_repository.dart';
+import 'repository/notification_repository.dart';
 import 'widgets/app_scaffold.dart';
 import 'pages/login_page.dart';
 
@@ -26,12 +28,22 @@ Future<void> main() async {
   final themeProvider = ThemeProvider();
   await themeProvider.initialize();
 
+  final appSettingsProvider = AppSettingsProvider();
+  await appSettingsProvider.initialize();
+
   final postRepo = InMemoryPostRepository();
   await postRepo.initialize();
+
+  final notificationRepo = InMemoryNotificationRepository();
+  await notificationRepo.initialize();
+  
+  // Inject notification repository into post repository
+  postRepo.setNotificationRepository(notificationRepo);
 
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: themeProvider),
+      ChangeNotifierProvider.value(value: appSettingsProvider),
       Provider<NotificationService>(
           create: (_) => NotificationService(_scaffoldMessengerKey)),
       // NotificationService depends on the scaffold messenger key below; we'll provide it using a ProxyProvider in the widget tree.
@@ -41,6 +53,7 @@ Future<void> main() async {
         update: (context, authService, previous) => UserInfoService(authService),
       ),
       ChangeNotifierProvider<PostRepository>.value(value: postRepo),
+      ChangeNotifierProvider<NotificationRepository>.value(value: notificationRepo),
       ChangeNotifierProvider<CalendarProvider>(
           create: (_) => CalendarProvider()),
       ChangeNotifierProvider<UserProvider>(create: (_) => UserProvider()),

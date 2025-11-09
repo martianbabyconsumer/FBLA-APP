@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../repository/post_repository.dart';
+import '../providers/auth_service.dart';
+import '../providers/user_provider.dart';
 
 class FavoritesPage extends StatelessWidget {
   const FavoritesPage({super.key});
@@ -36,7 +38,14 @@ class FavoritesPage extends StatelessWidget {
                               : null),
                       onPressed: () {
                         // toggle like via repo
-                        repo.toggleLike(p.id);
+                        final authService = context.read<AuthService>();
+                        final userProvider = context.read<UserProvider>();
+                        repo.toggleLike(
+                          p.id,
+                          currentUserId: authService.user?.uid,
+                          currentUserName: userProvider.displayName.isNotEmpty ? userProvider.displayName : 'You',
+                          currentUserHandle: (userProvider.username != null && userProvider.username!.isNotEmpty) ? '@${userProvider.username}' : '@you',
+                        );
                       },
                     ),
                     onTap: () async {
@@ -81,9 +90,16 @@ class FavoritesPage extends StatelessWidget {
                                               return Row(
                                                 children: [
                                                   IconButton(
-                                                    onPressed: () =>
-                                                        localRepo.toggleLike(
-                                                            updatedPost.id),
+                                                    onPressed: () {
+                                                      final authService = context.read<AuthService>();
+                                                      final userProvider = context.read<UserProvider>();
+                                                      localRepo.toggleLike(
+                                                        updatedPost.id,
+                                                        currentUserId: authService.user?.uid,
+                                                        currentUserName: userProvider.displayName.isNotEmpty ? userProvider.displayName : 'You',
+                                                        currentUserHandle: (userProvider.username != null && userProvider.username!.isNotEmpty) ? '@${userProvider.username}' : '@you',
+                                                      );
+                                                    },
                                                     icon: Icon(
                                                         updatedPost.liked
                                                             ? Icons.favorite

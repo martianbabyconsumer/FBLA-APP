@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_service.dart';
+import '../providers/user_provider.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -50,8 +51,20 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       );
     } else {
+      // Update UserProvider with the new user's information
+      final userProvider = context.read<UserProvider>();
+      try {
+        await userProvider.saveSettings(
+          _displayNameController.text.trim(),
+          _emailController.text.trim(),
+          username: _usernameController.text.trim().isEmpty ? null : _usernameController.text.trim(),
+        );
+      } catch (e) {
+        // If saving settings fails, still continue
+      }
+      
       // Navigate back to login or home
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -77,17 +90,20 @@ class _SignUpPageState extends State<SignUpPage> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: theme.primaryColor,
+                    color: theme.colorScheme.primary,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Text(
-                      'FBLA',
-                      style: TextStyle(
-                        color: theme.colorScheme.onPrimary,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18.0),
+                    child: Image.asset(
+                      'assets/images/bee_logo_white.png',
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(
+                          Icons.hexagon,
+                          size: 70,
+                          color: Colors.white,
+                        );
+                      },
                     ),
                   ),
                 ),

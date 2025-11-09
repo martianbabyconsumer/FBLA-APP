@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
 import '../repository/post_repository.dart';
-import '../providers/user_provider.dart';
 import '../providers/user_info_service.dart';
+import 'poll_widget.dart';
 
 class PostCard extends StatefulWidget {
   const PostCard({
@@ -24,23 +24,33 @@ class PostCard extends StatefulWidget {
   State<PostCard> createState() => _PostCardState();
 }
 
-class _PostCardState extends State<PostCard> {
-  String? _displayName;
-  String? _username;
+class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin {
+  late AnimationController _likeAnimationController;
+  late Animation<double> _likeScale;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadUserInfo();
+  void initState() {
+    super.initState();
+    _likeAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _likeScale = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: _likeAnimationController, curve: Curves.elasticOut),
+    );
   }
 
-  Future<void> _loadUserInfo() async {
-    final userInfoService = context.read<UserInfoService>();
-    final info = await userInfoService.getUserInfo(widget.post.userId);
-    if (mounted) {
-      setState(() {
-        _displayName = info.displayName;
-        _username = info.username;
+  @override
+  void dispose() {
+    _likeAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _onLikeTapped() {
+    widget.onLike();
+    if (widget.post.liked) {
+      _likeAnimationController.forward().then((_) {
+        _likeAnimationController.reverse();
       });
     }
   }
@@ -48,13 +58,12 @@ class _PostCardState extends State<PostCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userProvider = context.watch<UserProvider>();
-    final userInfoService = context.watch<UserInfoService>();
+    final userInfoService = context.read<UserInfoService>();
     
-    // Use fetched names if available, otherwise fallback to stored values
-    final displayName = _displayName ?? widget.post.displayName;
-    final handle = _username ?? widget.post.handle;
-    final isCurrentUser = userInfoService.isCurrentUser(widget.post.userId);
+    // Use post's stored display name and handle directly
+    final displayName = widget.post.displayName;
+    final handle = widget.post.handle;
+    final isOwnPost = userInfoService.isCurrentUser(widget.post.userId);
 
     return Container(
       decoration: BoxDecoration(
@@ -82,59 +91,69 @@ class _PostCardState extends State<PostCard> {
             // Top row: avatar, names, date, and three-dot menu
             Row(
               children: [
-                // Profile picture - show custom image only for user's own posts
-                // Use the watched UserProvider above so this updates when the user
-                // changes their profile image or username in settings.
+                // Profile picture - show stored profile image from post
+                // This ensures profile pictures stay consistent regardless of theme
+                // and update across all past posts when user changes their picture
                 Builder(builder: (context) {
-                  if (!kIsWeb && isCurrentUser && userProvider.profileImagePath != null) {
+                  if (!kIsWeb && widget.post.profileImagePath != null && widget.post.profileImagePath!.isNotEmpty) {
                     return ClipOval(
                       child: Image.file(
-                        File(userProvider.profileImagePath!),
-                        key: ValueKey(userProvider.profileImagePath),
+                        File(widget.post.profileImagePath!),
+                        key: ValueKey(widget.post.profileImagePath), // Use profileImagePath as key to force rebuild
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          // If image fails to load, show FBLA logo
-                          return Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                'FBLA',
-                                style: TextStyle(
-                                  color: theme.colorScheme.onPrimary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                          // If image fails to load, show default avatar
+                          return ClipOval(
+                            child: Image.asset(
+                              'assets/images/feffe.webp',
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.person,
+                                    size: 30,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                );
+                              },
                             ),
                           );
                         },
                       ),
                     );
                   } else {
-                    // Show FBLA logo for all other posts or on web
-                    return Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          'FBLA',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    // Show default avatar for users without profile pictures
+                    return ClipOval(
+                      child: Image.asset(
+                        'assets/images/feffe.webp',
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.person,
+                              size: 30,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          );
+                        },
                       ),
                     );
                   }
@@ -171,9 +190,11 @@ class _PostCardState extends State<PostCard> {
                 ),
                 PopupMenuButton<String>(
                   onSelected: widget.onMenuSelected,
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'Report', child: Text('Report')),
-                    PopupMenuItem(value: 'Share', child: Text('Share')),
+                  itemBuilder: (context) => [
+                    if (isOwnPost)
+                      const PopupMenuItem(value: 'Delete', child: Text('Delete')),
+                    const PopupMenuItem(value: 'Report', child: Text('Report')),
+                    const PopupMenuItem(value: 'Share', child: Text('Share')),
                   ],
                 ),
               ],
@@ -188,7 +209,37 @@ class _PostCardState extends State<PostCard> {
               widget.post.body,
               style: const TextStyle(fontSize: 14),
             ),
+            // Tags
+            if (widget.post.tags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: widget.post.tags.map((tag) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '#$tag',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
             const SizedBox(height: 12),
+            // Poll
+            if (widget.post.poll != null) ...[
+              PollWidget(poll: widget.post.poll!, postId: widget.post.id),
+              const SizedBox(height: 12),
+            ],
             if (widget.post.imageUrl != null) ...[
               SizedBox(
                 height: 200,
@@ -245,19 +296,22 @@ class _PostCardState extends State<PostCard> {
             ],
             Row(
               children: [
-                IconButton(
-                  onPressed: widget.onLike,
-                  icon: Icon(
-                    widget.post.liked ? Icons.favorite : Icons.favorite_border,
-                    color: widget.post.liked
-                        ? theme.colorScheme.primary
-                        : (theme.brightness == Brightness.light
-                            ? theme.colorScheme.onSurface
-                                .withAlpha((0.7 * 255).round())
-                            : theme.colorScheme.onSurface
-                                .withAlpha((0.85 * 255).round())),
+                ScaleTransition(
+                  scale: _likeScale,
+                  child: IconButton(
+                    onPressed: _onLikeTapped,
+                    icon: Icon(
+                      widget.post.liked ? Icons.favorite : Icons.favorite_border,
+                      color: widget.post.liked
+                          ? theme.colorScheme.primary
+                          : (theme.brightness == Brightness.light
+                              ? theme.colorScheme.onSurface
+                                  .withAlpha((0.7 * 255).round())
+                              : theme.colorScheme.onSurface
+                                  .withAlpha((0.85 * 255).round())),
+                    ),
+                    splashRadius: 20,
                   ),
-                  splashRadius: 20,
                 ),
                 Text('${widget.post.likes}'),
                 const SizedBox(width: 16),
@@ -294,10 +348,6 @@ class _PostCardState extends State<PostCard> {
                             : theme.colorScheme.onSurface
                                 .withAlpha((0.85 * 255).round())),
                   ),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.share),
                 ),
               ],
             ),

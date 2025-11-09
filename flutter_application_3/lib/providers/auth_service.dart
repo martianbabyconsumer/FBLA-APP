@@ -40,15 +40,23 @@ class AuthService extends ChangeNotifier {
       await credential.user?.reload();
       _user = _auth.currentUser;
 
-      // Persist username -> email mapping locally so sign-in via username is possible on this device
+      // Persist username and display name locally
       if (username != null && username.trim().isNotEmpty) {
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('username:${username.trim()}', email.trim());
           // also save username for current user
           await prefs.setString('username', username.trim());
+          // Save username mapped to user email for persistence
+          await prefs.setString('username:${email.trim()}', username.trim());
         } catch (_) {}
       }
+      
+      // Save display name for this user's email
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('displayName:${email.trim()}', displayName);
+      } catch (_) {}
 
       _isLoading = false;
       notifyListeners();
@@ -104,6 +112,21 @@ class AuthService extends ChangeNotifier {
         password: password,
       );
 
+      // Load previously saved user data for this email
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final savedDisplayName = prefs.getString('displayName:${resolvedEmail}');
+        final savedUsername = prefs.getString('username:${resolvedEmail}');
+        if (savedDisplayName != null && _auth.currentUser != null) {
+          await _auth.currentUser!.updateDisplayName(savedDisplayName);
+          await _auth.currentUser!.reload();
+        }
+        // Also restore username for current session
+        if (savedUsername != null) {
+          await prefs.setString('username', savedUsername);
+        }
+      } catch (_) {}
+
       _isLoading = false;
       notifyListeners();
       return null; // Success
@@ -113,9 +136,8 @@ class AuthService extends ChangeNotifier {
 
       switch (e.code) {
         case 'user-not-found':
-          return 'No user found for that email.';
         case 'wrong-password':
-          return 'Wrong password provided.';
+          return 'Either the username or password is wrong';
         case 'invalid-email':
           return 'The email address is invalid.';
         case 'user-disabled':

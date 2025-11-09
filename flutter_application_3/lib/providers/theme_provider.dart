@@ -101,6 +101,14 @@ class ThemeProvider with ChangeNotifier {
         unselectedIconTheme: const IconThemeData(color: Color(0xFF616161)),
         backgroundColor: scaffoldBg,
       ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: _isDarkMode ? const Color(0xFF2D2D2D) : const Color(0xFF424242),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
       unselectedWidgetColor: _isDarkMode ? Colors.grey[400] : Colors.grey[600],
     );
   }

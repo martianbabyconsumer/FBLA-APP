@@ -1,7 +1,10 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/auth_service.dart';
+import '../providers/app_settings_provider.dart';
 import '../repository/post_repository.dart';
 
 // Post detail page to view/add comments. Returns updated Post when popping.
@@ -40,11 +43,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final now = DateTime.now();
     final dateLabel = '${now.month}/${now.day}';
     final up = context.read<UserProvider>();
+    final authService = context.read<AuthService>();
     final newComment = Comment(
       authorHandle: (up.username != null && up.username!.isNotEmpty) ? '@${up.username}' : '@you',
       authorName: up.displayName.isNotEmpty ? up.displayName : 'You',
       text: text,
       dateLabel: dateLabel,
+      userId: authService.user?.uid, // Add user ID to track comment ownership
+      profileImagePath: up.profileImagePath, // Store user's profile picture
       replies: [],
     );
 
@@ -56,6 +62,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
       }
       _replyingTo = null;
     });
+    
+    // Update the repository to persist the comment and create notification
+    final repo = context.read<PostRepository>();
+    if (parentComment == null) {
+      // Only create notifications for top-level comments, not replies
+      repo.addComment(_post.id, newComment, currentUserId: authService.user?.uid);
+    }
+    repo.updatePost(_post);
 
     _controller.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -93,6 +107,59 @@ class _PostDetailPageState extends State<PostDetailPage> {
     _controller.clear();
   }
 
+  Future<void> _deleteComment(Comment comment) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Comment'),
+        content: const Text('Are you sure you want to delete this comment?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      // Remove from local state first for immediate UI update
+      setState(() {
+        _removeCommentFromList(_post.comments, comment);
+      });
+      
+      // Then update the repository
+      final repo = context.read<PostRepository>();
+      repo.deleteComment(_post.id, comment);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Comment deleted')),
+        );
+      }
+    }
+  }
+
+  bool _removeCommentFromList(List<Comment> comments, Comment target) {
+    for (int i = 0; i < comments.length; i++) {
+      if (comments[i].id == target.id) {
+        comments.removeAt(i);
+        return true;
+      }
+      if (_removeCommentFromList(comments[i].replies, target)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -118,21 +185,71 @@ class _PostDetailPageState extends State<PostDetailPage> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text('FBLA',
-                          style: TextStyle(
-                              color: theme.colorScheme.onPrimary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ),
+                  // Profile picture - show stored profile image from post
+                  Builder(builder: (context) {
+                    if (!kIsWeb && _post.profileImagePath != null && _post.profileImagePath!.isNotEmpty) {
+                      return ClipOval(
+                        child: Image.file(
+                          File(_post.profileImagePath!),
+                          key: ObjectKey(_post),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // If image fails to load, show default avatar
+                            return ClipOval(
+                              child: Image.asset(
+                                'assets/images/feffe.webp',
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surfaceContainerHighest,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 30,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    } else {
+                      // Show default avatar for users without profile pictures
+                      return ClipOval(
+                        child: Image.asset(
+                          'assets/images/feffe.webp',
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.person,
+                                size: 30,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }
+                  }),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -202,13 +319,21 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 ),
               ],
               const SizedBox(height: 16),
-              Consumer<PostRepository>(
-                builder: (context, repo, _) {
+              Consumer2<PostRepository, AppSettingsProvider>(
+                builder: (context, repo, settings, _) {
+                  final authService = context.read<AuthService>();
+                  final userProvider = context.read<UserProvider>();
                   return Row(
                     children: [
                       IconButton(
                         onPressed: () {
-                          repo.toggleLike(_post.id);
+                          repo.toggleLike(
+                            _post.id, 
+                            autoSave: settings.autoSaveOnLike,
+                            currentUserId: authService.user?.uid,
+                            currentUserName: userProvider.displayName.isNotEmpty ? userProvider.displayName : 'You',
+                            currentUserHandle: (userProvider.username != null && userProvider.username!.isNotEmpty) ? '@${userProvider.username}' : '@you',
+                          );
                           final refreshed = repo.getPostById(_post.id);
                           if (refreshed != null) {
                             setState(() {
@@ -257,7 +382,68 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               ListTile(
-                                leading: const Icon(Icons.person_outline),
+                                leading: Builder(builder: (context) {
+                                  if (!kIsWeb && c.profileImagePath != null && c.profileImagePath!.isNotEmpty) {
+                                    return ClipOval(
+                                      child: Image.file(
+                                        File(c.profileImagePath!),
+                                        key: ObjectKey(c),
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return ClipOval(
+                                            child: Image.asset(
+                                              'assets/images/feffe.webp',
+                                              width: 40,
+                                              height: 40,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.surfaceContainerHighest,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.person,
+                                                    size: 25,
+                                                    color: theme.colorScheme.onSurfaceVariant,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  } else {
+                                    return ClipOval(
+                                      child: Image.asset(
+                                        'assets/images/feffe.webp',
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.surfaceContainerHighest,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.person,
+                                              size: 25,
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  }
+                                }),
                                 title: Row(
                                   children: [
                                     Text(c.authorName,
@@ -282,10 +468,29 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                   children: [
                                     Text(c.text),
                                     const SizedBox(height: 4),
-                                    TextButton(
-                                        onPressed: () => _startReply(c),
-                                        child: const Text('Reply',
-                                            style: TextStyle(fontSize: 12))),
+                                    Row(
+                                      children: [
+                                        TextButton(
+                                            onPressed: () => _startReply(c),
+                                            child: const Text('Reply',
+                                                style: TextStyle(fontSize: 12))),
+                                        Consumer<AuthService>(
+                                          builder: (context, authService, _) {
+                                            if (authService.user?.uid == c.userId) {
+                                              return TextButton(
+                                                onPressed: () => _deleteComment(c),
+                                                child: Text('Delete',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: theme.colorScheme.error,
+                                                    )),
+                                              );
+                                            }
+                                            return const SizedBox.shrink();
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
@@ -296,10 +501,68 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                     children: c.replies
                                         .map((reply) => ListTile(
                                               dense: true,
-                                              leading: const Icon(
-                                                  Icons
-                                                      .subdirectory_arrow_right,
-                                                  size: 20),
+                                              leading: Builder(builder: (context) {
+                                                if (!kIsWeb && reply.profileImagePath != null && reply.profileImagePath!.isNotEmpty) {
+                                                  return ClipOval(
+                                                    child: Image.file(
+                                                      File(reply.profileImagePath!),
+                                                      key: ObjectKey(reply),
+                                                      width: 32,
+                                                      height: 32,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context, error, stackTrace) {
+                                                        return ClipOval(
+                                                          child: Image.asset(
+                                                            'assets/images/feffe.webp',
+                                                            width: 32,
+                                                            height: 32,
+                                                            fit: BoxFit.cover,
+                                                            errorBuilder: (context, error, stackTrace) {
+                                                              return Container(
+                                                                width: 32,
+                                                                height: 32,
+                                                                decoration: BoxDecoration(
+                                                                  color: theme.colorScheme.surfaceContainerHighest,
+                                                                  shape: BoxShape.circle,
+                                                                ),
+                                                                child: Icon(
+                                                                  Icons.person,
+                                                                  size: 20,
+                                                                  color: theme.colorScheme.onSurfaceVariant,
+                                                                ),
+                                                              );
+                                                            },
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  );
+                                                } else {
+                                                  return ClipOval(
+                                                    child: Image.asset(
+                                                      'assets/images/feffe.webp',
+                                                      width: 32,
+                                                      height: 32,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context, error, stackTrace) {
+                                                        return Container(
+                                                          width: 32,
+                                                          height: 32,
+                                                          decoration: BoxDecoration(
+                                                            color: theme.colorScheme.surfaceContainerHighest,
+                                                            shape: BoxShape.circle,
+                                                          ),
+                                                          child: Icon(
+                                                            Icons.person,
+                                                            size: 20,
+                                                            color: theme.colorScheme.onSurfaceVariant,
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  );
+                                                }
+                                              }),
                                               title: Row(
                                                 children: [
                                                   Text(reply.authorName,
@@ -319,9 +582,34 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                                           fontSize: 12)),
                                                 ],
                                               ),
-                                              subtitle: Text(reply.text,
-                                                  style: const TextStyle(
-                                                      fontSize: 13)),
+                                              subtitle: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(reply.text,
+                                                      style: const TextStyle(
+                                                          fontSize: 13)),
+                                                  Consumer<AuthService>(
+                                                    builder: (context, authService, _) {
+                                                      if (authService.user?.uid == reply.userId) {
+                                                        return TextButton(
+                                                          onPressed: () => _deleteComment(reply),
+                                                          style: TextButton.styleFrom(
+                                                            padding: EdgeInsets.zero,
+                                                            minimumSize: const Size(0, 0),
+                                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                          ),
+                                                          child: Text('Delete',
+                                                              style: TextStyle(
+                                                                fontSize: 11,
+                                                                color: theme.colorScheme.error,
+                                                              )),
+                                                        );
+                                                      }
+                                                      return const SizedBox.shrink();
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
                                             ))
                                         .toList(),
                                   ),

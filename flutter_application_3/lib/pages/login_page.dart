@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_service.dart';
+import '../providers/user_provider.dart';
 import 'signup_page.dart';
+import '../utils/page_transitions.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -41,6 +43,28 @@ class _LoginPageState extends State<LoginPage> {
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
+    } else {
+      // On successful login, sync UserProvider with Firebase user data
+      final userProvider = context.read<UserProvider>();
+      final user = authService.user;
+      if (user != null) {
+        try {
+          // Load previously saved user data for this email (username, profile pic)
+          if (user.email != null && user.email!.isNotEmpty) {
+            await userProvider.loadUserDataForEmail(user.email!);
+          }
+          
+          // Update display name and email from Firebase Auth if not already set
+          if (user.displayName != null && user.displayName!.isNotEmpty) {
+            await userProvider.updateDisplayName(user.displayName!);
+          }
+          if (user.email != null && user.email!.isNotEmpty) {
+            await userProvider.updateEmail(user.email!);
+          }
+        } catch (e) {
+          // If updating fails, continue anyway
+        }
+      }
     }
   }
 
@@ -85,27 +109,67 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // FBLA Logo
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: theme.primaryColor,
-                    shape: BoxShape.circle,
+                const SizedBox(height: 20),
+                // FBLA HIVE Text - Slightly thicker with subtle stroke
+                Center(
+                  child: Stack(
+                    children: [
+                      // Very subtle stroke outline for slight extra thickness
+                      Text(
+                        'FBLA HIVE',
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 36,
+                          letterSpacing: 1.5,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 0.5
+                            ..color = Colors.black,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      // Fill
+                      const Text(
+                        'FBLA HIVE',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 36,
+                          letterSpacing: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  child: Center(
-                    child: Text(
-                      'FBLA',
-                      style: TextStyle(
-                        color: theme.colorScheme.onPrimary,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 24),
+                // FBLA Logo
+                Center(
+                  child: Container(
+                    width: 132, // 120 * 1.1 = 132
+                    height: 132,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(7.5), // Reduced further to make image 40% larger
+                      child: Image.asset(
+                        'assets/images/bee_logo_white.png',
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.hexagon,
+                            size: 126, // 90 * 1.4 = 126
+                            color: Colors.white,
+                          );
+                        },
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 48),
-
+                const SizedBox(height: 32),
                 Text(
                   'Welcome Back',
                   style: theme.textTheme.headlineMedium?.copyWith(
@@ -216,9 +280,7 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignUpPage(),
-                          ),
+                          FadePageRoute(page: const SignUpPage()),
                         );
                       },
                       child: const Text('Sign Up'),

@@ -5,6 +5,14 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
 import '../providers/calendar_provider.dart';
+import '../providers/app_settings_provider.dart';
+import '../providers/auth_service.dart';
+import '../providers/user_provider.dart';
+import '../repository/post_repository.dart';
+import '../widgets/post_card.dart';
+import '../pages/post_detail_page.dart';
+import '../pages/create_post_page.dart';
+import '../utils/page_transitions.dart';
 
 class ChapterPage extends StatefulWidget {
   const ChapterPage({super.key});
@@ -78,6 +86,12 @@ class _ChapterPageState extends State<ChapterPage> {
         name: 'resources',
         icon: Icons.book,
         description: 'Study materials and resources',
+      ),
+      Channel(
+        id: 'chapter-posts',
+        name: 'chapter-posts',
+        icon: Icons.article,
+        description: 'Chapter announcements and discussions',
       ),
     ];
     _selectedChannel = _channels[1]; // Start with general channel
@@ -441,11 +455,13 @@ class _ChapterPageState extends State<ChapterPage> {
                     ],
                   ),
                 ),
-                // Content area - show calendar for chapter-calendar channel, messages for others
+                // Content area - show calendar, posts, or messages based on channel
                 Expanded(
                   child: _selectedChannel.id == 'chapter-calendar'
                       ? _buildCalendarView(theme)
-                      : _buildMessagesView(theme),
+                      : _selectedChannel.id == 'chapter-posts'
+                        ? _buildPostsFeedView(theme)
+                        : _buildMessagesView(theme),
                 ),
                 // Message input
                 if (!_selectedChannel.isLocked &&
@@ -766,6 +782,303 @@ class _ChapterPageState extends State<ChapterPage> {
                     ),
                   ],
                 ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPostsFeedView(ThemeData theme) {
+    return Consumer3<PostRepository, AppSettingsProvider, AuthService>(
+      builder: (context, repo, settings, authService, _) {
+        // Get chapter-related posts (posts with chapter-related tags)
+        final chapterTags = ['Chapter News', 'Chapter Events', 'Meetings', 'Fundraising'];
+        final chapterPosts = repo.getPosts().where((post) {
+          return post.tags.any((tag) => 
+            chapterTags.any((chapterTag) => 
+              tag.toLowerCase().contains(chapterTag.toLowerCase())
+            )
+          );
+        }).toList();
+
+        if (chapterPosts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.article_outlined,
+                  size: 64,
+                  color: theme.colorScheme.onSurface.withOpacity(0.3),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No chapter posts yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Posts with chapter-related tags will appear here',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final newPost = await Navigator.push<Post>(
+                      context,
+                      SlideUpPageRoute(page: const CreatePostPage()),
+                    );
+                    if (newPost != null && context.mounted) {
+                      repo.addPost(newPost);
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Post'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            // Create post button
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: theme.dividerColor,
+                    width: 1,
+                  ),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: InkWell(
+                onTap: () async {
+                  final newPost = await Navigator.push<Post>(
+                    context,
+                    SlideUpPageRoute(page: const CreatePostPage()),
+                  );
+                  if (newPost != null && context.mounted) {
+                    repo.addPost(newPost);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: theme.dividerColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Share a chapter update...',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Posts list
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80, top: 8),
+                itemCount: chapterPosts.length,
+                itemBuilder: (context, index) {
+                  final post = chapterPosts[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: PostCard(
+                      post: post,
+                      onLike: () {
+                        final authService = context.read<AuthService>();
+                        final userProvider = context.read<UserProvider>();
+                        repo.toggleLike(
+                          post.id, 
+                          autoSave: settings.autoSaveOnLike,
+                          currentUserId: authService.user?.uid,
+                          currentUserName: userProvider.displayName.isNotEmpty ? userProvider.displayName : 'You',
+                          currentUserHandle: (userProvider.username != null && userProvider.username!.isNotEmpty) ? '@${userProvider.username}' : '@you',
+                        );
+                      },
+                      onComments: () async {
+                        final updated = await Navigator.push<Post>(
+                          context,
+                          SlideUpPageRoute(page: PostDetailPage(post: post)),
+                        );
+                        if (updated != null) {
+                          repo.updatePost(updated);
+                        }
+                      },
+                      onMenuSelected: (value) async {
+                        if (value == 'Delete') {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Post'),
+                              content: const Text('Are you sure you want to delete this post?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Theme.of(context).colorScheme.error,
+                                  ),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true && context.mounted) {
+                            final success = repo.deletePost(post.id);
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Post deleted'),
+                                  backgroundColor: Colors.grey[800],
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        } else if (value == 'Report') {
+                          // Report functionality
+                          final reasons = [
+                            'Spam or misleading',
+                            'Harassment or bullying',
+                            'Inappropriate content',
+                            'False information',
+                            'Other',
+                          ];
+                          String? selectedReason;
+                          final reasonController = TextEditingController();
+
+                          final reported = await showDialog<bool>(
+                            context: context,
+                            builder: (dialogContext) => StatefulBuilder(
+                              builder: (context, setState) => AlertDialog(
+                                title: const Text('Report Post'),
+                                content: SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Why are you reporting this post?'),
+                                      const SizedBox(height: 16),
+                                      ...reasons.map((reason) => RadioListTile<String>(
+                                        title: Text(reason),
+                                        value: reason,
+                                        groupValue: selectedReason,
+                                        onChanged: (value) {
+                                          setState(() => selectedReason = value);
+                                        },
+                                      )).toList(),
+                                      if (selectedReason == 'Other') ...[
+                                        const SizedBox(height: 8),
+                                        TextField(
+                                          controller: reasonController,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Please specify',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          maxLines: 3,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dialogContext, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: selectedReason != null
+                                      ? () => Navigator.pop(dialogContext, true)
+                                      : null,
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Theme.of(context).colorScheme.error,
+                                    ),
+                                    child: const Text('Report'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+
+                          if (reported == true && context.mounted) {
+                            final userId = authService.user?.uid ?? 'guest';
+                            final reason = selectedReason == 'Other'
+                              ? reasonController.text.trim()
+                              : selectedReason!;
+
+                            final success = await repo.reportPost(post.id, reason, userId);
+
+                            if (success && context.mounted) {
+                              final hidePost = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Report Submitted'),
+                                  content: const Text(
+                                    'Thank you for reporting this post. Our team will review it shortly.\n\nWould you like to hide this post from your feed?'
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: const Text('No'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: const Text('Yes, Hide Post'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (hidePost == true && context.mounted) {
+                                repo.hidePost(post.id, userId);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Post hidden'),
+                                    backgroundColor: Colors.grey[800],
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('$value on post ${post.id}'),
+                              backgroundColor: Colors.grey[800],
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ],

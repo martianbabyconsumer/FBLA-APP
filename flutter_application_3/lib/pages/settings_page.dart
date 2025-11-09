@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/auth_service.dart';
+import '../providers/app_settings_provider.dart';
+import '../repository/post_repository.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -73,16 +75,38 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (image != null && mounted) {
         final userProvider = context.read<UserProvider>();
+        final authService = context.read<AuthService>();
+        final postRepository = context.read<PostRepository>();
 
         if (kIsWeb) {
           // For web, store the XFile and save its path to provider
           setState(() {
             _webImage = image;
           });
-          await userProvider.updateProfileImage(image.path);
+          await userProvider.updateProfileImage(image.path, userEmail: authService.email);
         } else {
           // For mobile, store the path directly
-          await userProvider.updateProfileImage(image.path);
+          await userProvider.updateProfileImage(image.path, userEmail: authService.email);
+        }
+
+        // Save profile picture URL to Firebase Auth
+        try {
+          await authService.user?.updatePhotoURL(image.path);
+          await authService.refreshUser();
+        } catch (e) {
+          print('Failed to update Firebase photoURL: $e');
+        }
+
+        // Update all existing posts and comments with new profile picture
+        if (authService.user?.uid != null) {
+          final username = userProvider.username;
+          final handle = (username != null && username.isNotEmpty) ? '@$username' : '@you';
+          postRepository.updateUserInfo(
+            authService.user!.uid, 
+            handle, 
+            userProvider.displayName,
+            image.path, // Use the image path directly instead of userProvider.profileImagePath
+          );
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -128,15 +152,6 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(v ? 'Feed images enabled' : 'Feed images hidden')),
-    );
-  }
-
-  Future<void> _setFontSize(double value) async {
-    final themeProvider = context.read<ThemeProvider>();
-    await themeProvider.setFontSize(value);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Font size updated to ${(value * 100).round()}%')),
     );
   }
 
@@ -200,10 +215,34 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _clearProfileImage() async {
     final userProvider = context.read<UserProvider>();
-    await userProvider.updateProfileImage(null);
+    final authService = context.read<AuthService>();
+    final postRepository = context.read<PostRepository>();
+    
+    await userProvider.updateProfileImage(null, userEmail: authService.email);
     setState(() {
       _webImage = null;
     });
+    
+    // Remove profile picture from Firebase Auth
+    try {
+      await authService.user?.updatePhotoURL(null);
+      await authService.refreshUser();
+    } catch (e) {
+      print('Failed to update Firebase photoURL: $e');
+    }
+    
+    // Update all existing posts and comments with removed profile picture
+    if (authService.user?.uid != null) {
+      final username = userProvider.username;
+      final handle = (username != null && username.isNotEmpty) ? '@$username' : '@you';
+      postRepository.updateUserInfo(
+        authService.user!.uid, 
+        handle, 
+        userProvider.displayName,
+        null, // Remove profile image from all posts/comments
+      );
+    }
+    
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile picture cleared')));
@@ -212,21 +251,48 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _saveSettings() async {
     final authService = context.read<AuthService>();
+    final postRepository = context.read<PostRepository>();
+    final userProvider = context.read<UserProvider>();
     
     try {
+      final newDisplayName = _displayNameController.text.trim();
+      final newUsername = _usernameController.text.trim();
+      
       // Update Firebase display name if changed
-      if (_displayNameController.text.trim().isNotEmpty &&
-          _displayNameController.text.trim() != authService.displayName) {
-        await authService.user?.updateDisplayName(_displayNameController.text.trim());
+      if (newDisplayName.isNotEmpty && newDisplayName != authService.displayName) {
+        await authService.user?.updateDisplayName(newDisplayName);
         await authService.refreshUser();
       }
 
       // Save username to SharedPreferences
-      if (_usernameController.text.trim().isNotEmpty) {
+      if (newUsername.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('username', _usernameController.text.trim());
+        await prefs.setString('username', newUsername);
         // Also update the mapping from username to email for login
-        await prefs.setString('username:${_usernameController.text.trim()}', authService.email);
+        await prefs.setString('username:$newUsername', authService.email);
+        // Save username mapped to email for persistence
+        await prefs.setString('username:${authService.email}', newUsername);
+      }
+      
+      // Save display name mapped to email for persistence
+      if (newDisplayName.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('displayName:${authService.email}', newDisplayName);
+      }
+
+      // Update UserProvider with new values
+      if (newDisplayName.isNotEmpty) {
+        await userProvider.updateDisplayName(newDisplayName);
+      }
+      if (newUsername.isNotEmpty) {
+        await userProvider.updateUsername(newUsername);
+      }
+
+      // Update all existing posts and comments by this user
+      if (authService.user?.uid != null) {
+        final newHandle = newUsername.isNotEmpty ? '@$newUsername' : '@you';
+        final displayName = newDisplayName.isNotEmpty ? newDisplayName : authService.displayName;
+        postRepository.updateUserInfo(authService.user!.uid, newHandle, displayName, userProvider.profileImagePath);
       }
 
       if (mounted) {
@@ -296,16 +362,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // Intentionally remove the visible title per user request
-        title: const SizedBox.shrink(),
-      ),
-      body: Consumer2<UserProvider, AuthService>(
-        builder: (context, userProvider, authService, _) {
-          return ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
+    return Consumer2<UserProvider, AuthService>(
+      builder: (context, userProvider, authService, _) {
+        return ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
               // Profile Picture Section
               Card(
                 elevation: 2,
@@ -439,28 +500,124 @@ class _SettingsPageState extends State<SettingsPage> {
                             splashRadius: 0,
                           ),
                         ),
-                        child: Column(
-                          children: [
-                            SwitchListTile(
-                              title: const Text('Enable notifications'),
-                              value: _enableNotifications,
-                              onChanged: (v) => _setEnableNotifications(v),
-                            ),
-                            SwitchListTile(
-                              title: const Text('Show images in feed'),
-                              value: _showImagesInFeed,
-                              onChanged: (v) => _setShowImagesInFeed(v),
-                            ),
-                          ],
+                        child: Consumer<AppSettingsProvider>(
+                          builder: (context, appSettings, _) {
+                            return Column(
+                              children: [
+                                SwitchListTile(
+                                  title: const Text('Enable notifications'),
+                                  value: _enableNotifications,
+                                  onChanged: (v) => _setEnableNotifications(v),
+                                ),
+                                SwitchListTile(
+                                  title: const Text('Show images in feed'),
+                                  value: _showImagesInFeed,
+                                  onChanged: (v) => _setShowImagesInFeed(v),
+                                ),
+                                const Divider(height: 24),
+                                SwitchListTile(
+                                  title: const Text('Auto-save posts when liked'),
+                                  subtitle: const Text('Automatically bookmark posts you like'),
+                                  value: appSettings.autoSaveOnLike,
+                                  onChanged: (v) async {
+                                    await appSettings.setAutoSaveOnLike(v);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(v ? 'Auto-save enabled' : 'Auto-save disabled'),
+                                          backgroundColor: Colors.grey[800],
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                                SwitchListTile(
+                                  title: const Text('Like notifications'),
+                                  subtitle: const Text('Get notified when someone likes your posts'),
+                                  value: appSettings.likeNotifications,
+                                  onChanged: (v) async {
+                                    await appSettings.setLikeNotifications(v);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(v ? 'Like notifications enabled' : 'Like notifications disabled'),
+                                          backgroundColor: Colors.grey[800],
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                                SwitchListTile(
+                                  title: const Text('Comment notifications'),
+                                  subtitle: const Text('Get notified when someone comments on your posts'),
+                                  value: appSettings.commentNotifications,
+                                  onChanged: (v) async {
+                                    await appSettings.setCommentNotifications(v);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(v ? 'Comment notifications enabled' : 'Comment notifications disabled'),
+                                          backgroundColor: Colors.grey[800],
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                                SwitchListTile(
+                                  title: const Text('Public profile'),
+                                  subtitle: Text(appSettings.profileIsPublic 
+                                    ? 'Your profile is visible to everyone' 
+                                    : 'Your profile is private'),
+                                  value: appSettings.profileIsPublic,
+                                  onChanged: (v) async {
+                                    await appSettings.setProfileVisibility(v);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(v ? 'Profile is now public' : 'Profile is now private'),
+                                          backgroundColor: Colors.grey[800],
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 12),
                       const Divider(),
                       const SizedBox(height: 12),
                       // Font Size Slider
-                      const Text('Font Size',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Font Size',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                          TextButton.icon(
+                            onPressed: () {
+                              final themeProvider = context.read<ThemeProvider>();
+                              themeProvider.setFontSize(1.0);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Font size reset to 100%')),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('Reset'),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Consumer<ThemeProvider>(
                         builder: (context, themeProvider, child) {
@@ -470,11 +627,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               Expanded(
                                 child: Slider(
                                   value: themeProvider.fontSize,
-                                  min: 0.8,
-                                  max: 1.4,
-                                  divisions: 6,
-                                  label: '${(themeProvider.fontSize * 100).round()}%',
-                                  onChanged: (value) => _setFontSize(value),
+                                  min: 0.5,
+                                  max: 2.0,
+                                  onChanged: (value) {
+                                    themeProvider.setFontSize(value);
+                                  },
+                                  onChangeEnd: (value) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Font size updated to ${(value * 100).round()}%')),
+                                      );
+                                    }
+                                  },
                                 ),
                               ),
                               const Text('A', style: TextStyle(fontSize: 20)),
@@ -651,9 +815,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             ],
-          );
-        },
-      ),
+        );
+      },
     );
   }
 }
