@@ -36,6 +36,19 @@ jobs:
       - name: Build iOS (unsigned .ipa)
         run: flutter build ipa --no-codesign --verbose
 
+      - name: Create IPA from Runner.app
+        if: always()
+        run: |
+          echo "Creating IPA manually from Runner.app..."
+          mkdir -p build/ios/ipa
+          cd build/ios/archive/Runner.xcarchive/Products/Applications
+          mkdir -p Payload
+          cp -R Runner.app Payload/
+          zip -r ../../../../../ipa/Runner.ipa Payload
+          rm -rf Payload
+          echo "IPA created at build/ios/ipa/Runner.ipa"
+          ls -lh ../../../../../ipa/
+
       - name: List build output
         if: always()
         run: |
