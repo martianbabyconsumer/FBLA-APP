@@ -60,6 +60,7 @@ class Post {
     this.profileImagePath, // User's profile picture path
     this.poll, // Optional poll
     List<String>? tags, // Tags/categories like "Nationals", "Community Service"
+    List<String>? crossPostedTo, // Platforms this post was cross-posted to
     int? likes,
     bool? liked,
     bool? saved,
@@ -68,6 +69,7 @@ class Post {
         liked = liked ?? false,
         saved = saved ?? false,
         tags = tags ?? [],
+        crossPostedTo = crossPostedTo ?? [],
         comments = comments ?? <Comment>[];
   bool saved;
 
@@ -82,6 +84,7 @@ class Post {
   final String? profileImagePath; // User's profile picture path
   final Poll? poll; // Optional poll
   final List<String> tags; // Tags for categorization
+  final List<String> crossPostedTo; // Platforms this post was cross-posted to (e.g., ['Facebook', 'X', 'Instagram'])
 
   int likes;
   bool liked;
@@ -99,6 +102,7 @@ class Post {
         profileImagePath: profileImagePath,
         poll: poll?.copy(),
         tags: List.from(tags),
+        crossPostedTo: List.from(crossPostedTo),
         likes: likes,
         liked: liked,
         saved: saved,
@@ -417,6 +421,61 @@ class InMemoryPostRepository extends PostRepository {
             likes: 142,
             tags: ['Networking', 'Professional Development', 'Events'],
             comments: [],
+          ),
+          // Cross-posted from Instagram
+          Post(
+            id: 'social_ig_1',
+            handle: '@newyork_fbla_ig',
+            displayName: 'NYC FBLA Chapter 📸',
+            userId: 'bot_nyc_fbla_ig',
+            dateLabel: 'Nov 5',
+            title: 'First Place at State Competition! 🥇',
+            body:
+                'We did it! Our team just won FIRST PLACE in Business Plan at the New York State FBLA Competition! Couldn\'t be prouder of everyone who worked so hard on this project. Next stop: Nationals! 🎯✨\n\n#fbla25-26 #StateChampions #BusinessPlan #FutureLeaders',
+            imageUrl: null,
+            likes: 287,
+            tags: ['Competitions', 'State', 'Awards', 'Nationals'],
+            crossPostedTo: ['Facebook', 'X', 'Instagram', 'LinkedIn'], // Posted to all platforms
+            comments: [
+              Comment(
+                authorHandle: '@sfhs_fbla',
+                authorName: 'San Francisco HS FBLA',
+                text: 'Congratulations! See you at Nationals! 🎉',
+                dateLabel: 'Nov 5',
+                replies: [],
+              ),
+              Comment(
+                authorHandle: '@chicago_fbla',
+                authorName: 'Chicago North FBLA',
+                text: 'Amazing work NYC! Best of luck at Nationals!',
+                dateLabel: 'Nov 5',
+                replies: [],
+              ),
+            ],
+          ),
+          // Cross-posted from X (Twitter)
+          Post(
+            id: 'social_x_1',
+            handle: '@seattle_fbla_x',
+            displayName: 'Seattle Tech FBLA 🐦',
+            userId: 'bot_seattle_fbla_x',
+            dateLabel: 'Nov 4',
+            title: 'Breaking: Partnership Announcement 🚀',
+            body:
+                'HUGE NEWS: We\'re excited to announce our new partnership with @Microsoft for this year\'s coding competition! They\'ll be providing mentorship, resources, and internship opportunities for our members. This is what #fbla25-26 is all about! 💻🌟\n\n#FBLA #TechPartnership #StudentSuccess',
+            imageUrl: null,
+            likes: 412,
+            tags: ['Partnerships', 'Technology', 'Opportunities', 'Coding'],
+            crossPostedTo: ['X'], // Posted to X only
+            comments: [
+              Comment(
+                authorHandle: '@austin_fbla',
+                authorName: 'Austin West FBLA',
+                text: 'This is incredible! Congrats Seattle! 🎊',
+                dateLabel: 'Nov 4',
+                replies: [],
+              ),
+            ],
           ),
         ];
 
@@ -1137,6 +1196,24 @@ class InMemoryPostRepository extends PostRepository {
         'event': 'Economics',
         'chapter': 'Manhattan High',
         'grade': '12',
+      },
+      'bot_nyc_fbla_ig': {
+        'displayName': 'NYC FBLA Chapter 📸',
+        'username': 'newyork_fbla_ig',
+        'bio': 'Official NYC FBLA Instagram | State Champions | #fbla25-26 | Posting from the Big Apple 🗽',
+        'event': 'Business Plan',
+        'chapter': 'New York FBLA',
+        'grade': 'Grad',
+      },
+      
+      // Seattle chapter bots
+      'bot_seattle_fbla_x': {
+        'displayName': 'Seattle Tech FBLA 🐦',
+        'username': 'seattle_fbla_x',
+        'bio': 'Seattle Tech FBLA on X | Microsoft Partnership | Coding & Innovation | #fbla25-26 ☕💻',
+        'event': 'Coding & Programming',
+        'chapter': 'Seattle Tech HS',
+        'grade': 'Grad',
       },
       
       // System bot

@@ -9,6 +9,7 @@ import '../providers/user_provider.dart';
 import '../providers/auth_service.dart';
 import '../providers/app_settings_provider.dart';
 import '../repository/post_repository.dart';
+import '../widgets/onboarding_tutorial.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -28,6 +29,12 @@ class _SettingsPageState extends State<SettingsPage> {
   XFile? _webImage; // For web platform
   bool _enableNotifications = false;
   bool _showImagesInFeed = true;
+  
+  // Track connected social media accounts
+  bool _facebookConnected = false;
+  bool _twitterConnected = false;
+  bool _instagramConnected = false;
+  bool _linkedinConnected = false;
 
   @override
   void initState() {
@@ -147,6 +154,10 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _enableNotifications = prefs.getBool('enableNotifications') ?? false;
       _showImagesInFeed = prefs.getBool('showImagesInFeed') ?? true;
+      _facebookConnected = prefs.getBool('facebookConnected') ?? false;
+      _twitterConnected = prefs.getBool('twitterConnected') ?? false;
+      _instagramConnected = prefs.getBool('instagramConnected') ?? false;
+      _linkedinConnected = prefs.getBool('linkedinConnected') ?? false;
     });
   }
 
@@ -1233,6 +1244,66 @@ class _SettingsPageState extends State<SettingsPage> {
 
               const SizedBox(height: 16),
 
+              // Connected Accounts Section (Mockup)
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.link, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Connected Accounts',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Link your social media accounts to share posts across platforms',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSocialAccountTile(
+                        icon: Icons.facebook,
+                        label: 'Facebook',
+                        color: const Color(0xFF1877F2),
+                        isConnected: _facebookConnected,
+                      ),
+                      const Divider(height: 24),
+                      _buildSocialAccountTile(
+                        icon: Icons.close,
+                        label: 'X (Twitter)',
+                        color: Colors.black,
+                        isConnected: _twitterConnected,
+                      ),
+                      const Divider(height: 24),
+                      _buildSocialAccountTile(
+                        icon: Icons.camera_alt,
+                        label: 'Instagram',
+                        color: const Color(0xFFE4405F),
+                        isConnected: _instagramConnected,
+                      ),
+                      const Divider(height: 24),
+                      _buildSocialAccountTile(
+                        icon: Icons.work,
+                        label: 'LinkedIn',
+                        color: const Color(0xFF0A66C2),
+                        isConnected: _linkedinConnected,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
               // Account Actions
               Card(
                 elevation: 2,
@@ -1245,6 +1316,24 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: const Text('Change Password'),
                       trailing: const Icon(Icons.arrow_forward_ios),
                       onTap: () => _showChangePasswordDialog(),
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.school),
+                      title: const Text('Show Tutorial Again'),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () async {
+                        // Reset onboarding and show it
+                        await OnboardingHelper.resetOnboarding();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Tutorial will show on next app launch'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
                     ),
                     const Divider(),
                     ListTile(
@@ -1293,6 +1382,291 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
         );
       },
+    );
+  }
+  
+  Widget _buildSocialAccountTile({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isConnected,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color, size: 22),
+      ),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        isConnected ? 'Connected' : 'Not connected',
+        style: TextStyle(
+          fontSize: 13,
+          color: isConnected ? Colors.green : Colors.grey,
+        ),
+      ),
+      trailing: ElevatedButton(
+        onPressed: () {
+          if (isConnected) {
+            _disconnectSocialMedia(label);
+          } else {
+            _showSocialMediaSignIn(label, color, icon);
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isConnected ? Colors.grey[300] : color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child: Text(
+          isConnected ? 'Disconnect' : 'Connect',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isConnected ? Colors.black87 : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _disconnectSocialMedia(String platform) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    setState(() {
+      if (platform == 'Facebook') {
+        _facebookConnected = false;
+        prefs.setBool('facebookConnected', false);
+      } else if (platform == 'X (Twitter)') {
+        _twitterConnected = false;
+        prefs.setBool('twitterConnected', false);
+      } else if (platform == 'Instagram') {
+        _instagramConnected = false;
+        prefs.setBool('instagramConnected', false);
+      } else if (platform == 'LinkedIn') {
+        _linkedinConnected = false;
+        prefs.setBool('linkedinConnected', false);
+      }
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.link_off, color: Colors.white),
+              const SizedBox(width: 12),
+              Text('$platform disconnected'),
+            ],
+          ),
+          backgroundColor: Colors.orange[700],
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+  
+  void _showSocialMediaSignIn(String platform, Color color, IconData icon) {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    String? errorMessage;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (builderContext, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Text('Sign in to $platform'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Error message banner
+                  if (errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[300]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red[700], size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red[900],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  TextField(
+                    controller: emailController,
+                    decoration: InputDecoration(
+                      labelText: 'Email or Username',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person),
+                      hintText: 'Enter your $platform email',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    onChanged: (value) {
+                      if (errorMessage != null) {
+                        setDialogState(() => errorMessage = null);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock),
+                      hintText: 'Enter your password',
+                    ),
+                    obscureText: true,
+                    onChanged: (value) {
+                      if (errorMessage != null) {
+                        setDialogState(() => errorMessage = null);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Privacy Notice (like our app)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'By connecting, you allow FBLA Connect to post on your behalf and access basic profile information.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.blue[900],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  emailController.dispose();
+                  passwordController.dispose();
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  // Validate fields
+                  if (emailController.text.trim().isEmpty || passwordController.text.trim().isEmpty) {
+                    setDialogState(() {
+                      errorMessage = 'Please fill in all fields';
+                    });
+                    return;
+                  }
+                  
+                  emailController.dispose();
+                  passwordController.dispose();
+                  Navigator.pop(dialogContext);
+                  
+                  // Save connection state
+                  final prefs = await SharedPreferences.getInstance();
+                  this.setState(() {
+                    if (platform == 'Facebook') {
+                      _facebookConnected = true;
+                      prefs.setBool('facebookConnected', true);
+                    } else if (platform == 'X (Twitter)') {
+                      _twitterConnected = true;
+                      prefs.setBool('twitterConnected', true);
+                    } else if (platform == 'Instagram') {
+                      _instagramConnected = true;
+                      prefs.setBool('instagramConnected', true);
+                    } else if (platform == 'LinkedIn') {
+                      _linkedinConnected = true;
+                      prefs.setBool('linkedinConnected', true);
+                    }
+                  });
+                  
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.white),
+                            const SizedBox(width: 12),
+                            Text('$platform connected successfully!'),
+                          ],
+                        ),
+                        backgroundColor: Colors.green[700],
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Connect'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

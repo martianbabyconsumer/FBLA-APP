@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_service.dart';
 import '../providers/user_provider.dart';
+import '../utils/app_typography.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -95,19 +96,20 @@ class _SignUpPageState extends State<SignUpPage> {
                 final shouldExit = await showDialog<bool>(
                   context: dialogContext,
                   builder: (context) => AlertDialog(
-                    title: const Text('Skip Verification?'),
-                    content: const Text(
+                    title: Text('Skip Verification?', style: AppTypography.subsectionHeading(context)),
+                    content: Text(
                       'Your email is not verified yet. You can verify it later from settings, but some features may be limited.\n\nAre you sure you want to skip?',
+                      style: AppTypography.bodyMedium(context),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Continue Waiting'),
+                        child: Text('Continue Waiting', style: AppTypography.button(context)),
                       ),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(true),
                         style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('Skip Verification'),
+                        child: Text('Skip Verification', style: AppTypography.button(context)),
                       ),
                     ],
                   ),
@@ -115,28 +117,25 @@ class _SignUpPageState extends State<SignUpPage> {
                 return shouldExit ?? false;
               },
               child: AlertDialog(
-                title: const Row(
+                title: Row(
                   children: [
-                    Icon(Icons.mark_email_read, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Verify Your Email'),
+                    const Icon(Icons.mark_email_read, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Text('Verify Your Email', style: AppTypography.subsectionHeading(context)),
                   ],
                 ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'We\'ve sent a verification link to:',
-                      style: TextStyle(fontSize: 14),
+                      style: AppTypography.bodyMedium(context),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       _emailController.text.trim(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                      style: AppTypography.bodyMedium(context).copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 20),
                     Container(
@@ -153,19 +152,19 @@ class _SignUpPageState extends State<SignUpPage> {
                             children: [
                               Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
                               const SizedBox(width: 8),
-                              const Text(
+                              Text(
                                 'Next Steps:',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: AppTypography.label(context).copyWith(fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             '• Check your email inbox\n'
                             '• Click the verification link\n'
                             '• This dialog will close automatically\n'
                             '• Check spam/junk folder if not found',
-                            style: TextStyle(fontSize: 12),
+                            style: AppTypography.caption(context),
                           ),
                         ],
                       ),
@@ -182,9 +181,9 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'Waiting for verification...',
-                          style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                          style: AppTypography.caption(context).copyWith(fontStyle: FontStyle.italic),
                         ),
                       ],
                     ),
@@ -200,10 +199,10 @@ class _SignUpPageState extends State<SignUpPage> {
                         children: [
                           Icon(Icons.lock, size: 16, color: Colors.orange.shade700),
                           const SizedBox(width: 8),
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               'You must verify to continue. Use back button to skip.',
-                              style: TextStyle(fontSize: 11),
+                              style: AppTypography.caption(context),
                             ),
                           ),
                         ],
@@ -231,7 +230,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         }
                       }
                     },
-                    child: const Text('Resend Email'),
+                    child: Text('Resend Email', style: AppTypography.button(context)),
                   ),
                 ],
               ),
@@ -253,7 +252,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sign Up'),
+        title: Text('Sign Up', style: AppTypography.pageTitle(context)),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -290,17 +289,13 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 Text(
                   'Create Account',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTypography.pageTitle(context),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign up to get started',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.hintColor,
-                  ),
+                  style: AppTypography.bodyLarge(context, color: theme.hintColor),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -451,9 +446,9 @@ class _SignUpPageState extends State<SignUpPage> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text(
+                          : Text(
                               'Sign Up',
-                              style: TextStyle(fontSize: 16),
+                              style: AppTypography.button(context),
                             ),
                     );
                   },
@@ -464,12 +459,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Already have an account? '),
+                    Text('Already have an account? ', style: AppTypography.bodyMedium(context)),
                     TextButton(
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      child: const Text('Sign In'),
+                      child: Text('Sign In', style: AppTypography.button(context)),
                     ),
                   ],
                 ),

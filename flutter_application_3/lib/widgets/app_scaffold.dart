@@ -8,8 +8,10 @@ import '../pages/activity_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/home_feed_page.dart';
 import '../utils/page_transitions.dart';
+import '../utils/app_typography.dart';
 import '../repository/notification_repository.dart';
 import '../providers/auth_service.dart';
+import 'onboarding_tutorial.dart';
 // App scaffold - keep imports minimal
 
 class AppScaffold extends StatefulWidget {
@@ -22,6 +24,22 @@ class AppScaffold extends StatefulWidget {
 class _AppScaffoldState extends State<AppScaffold> {
   int _selectedIndex = 2; // Default to home tab
   int _previousIndex = 2; // Track previous tab for slide direction
+  bool _showingOnboarding = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboarding();
+  }
+  
+  Future<void> _checkOnboarding() async {
+    final shouldShow = await OnboardingHelper.shouldShowOnboarding();
+    if (shouldShow && mounted) {
+      setState(() {
+        _showingOnboarding = true;
+      });
+    }
+  }
 
   Future<bool> _loadNotificationsEnabled() async {
     try {
@@ -58,7 +76,9 @@ class _AppScaffoldState extends State<AppScaffold> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       appBar: AppBar(
         backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
@@ -92,14 +112,7 @@ class _AppScaffoldState extends State<AppScaffold> {
               padding: const EdgeInsets.only(top: 2.0),
               child: Text(
                 'FBLA',
-                style: TextStyle(
-                  color: theme.appBarTheme.foregroundColor ??
-                      theme.colorScheme.onPrimary,
-                  fontFamily: 'Roboto',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  letterSpacing: 0.6,
-                ),
+                style: AppTypography.appTitle(context),
               ),
             ),
             const SizedBox(width: 6),
@@ -107,14 +120,7 @@ class _AppScaffoldState extends State<AppScaffold> {
               padding: const EdgeInsets.only(top: 2.0),
               child: Text(
                 'HIVE',
-                style: TextStyle(
-                  color: theme.appBarTheme.foregroundColor ??
-                      theme.colorScheme.onPrimary,
-                  fontFamily: 'Roboto',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  letterSpacing: 0.6,
-                ),
+                style: AppTypography.appTitle(context),
               ),
             ),
           ],
@@ -272,6 +278,17 @@ class _AppScaffoldState extends State<AppScaffold> {
           );
         },
       ),
+        ),
+        // Onboarding overlay
+        if (_showingOnboarding)
+          OnboardingTutorial(
+            onComplete: () {
+              setState(() {
+                _showingOnboarding = false;
+              });
+            },
+          ),
+      ],
     );
   }
 }
