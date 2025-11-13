@@ -37,17 +37,28 @@ jobs:
         run: flutter build ipa --no-codesign --verbose
 
       - name: Create IPA from Runner.app
-        if: always()
         run: |
           echo "Creating IPA manually from Runner.app..."
-          mkdir -p build/ios/ipa
-          cd build/ios/archive/Runner.xcarchive/Products/Applications
-          mkdir -p Payload
-          cp -R Runner.app Payload/
-          zip -r ../../../../../ipa/Runner.ipa Payload
+          
+          # Check if xcarchive exists
+          if [ -d "build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app" ]; then
+            echo "Found Runner.app in xcarchive"
+            APP_PATH="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          else
+            echo "Error: Runner.app not found in expected location"
+            echo "Looking for .app files:"
+            find build/ios -name "*.app" -type d || true
+            exit 1
+          fi
+          
+          # Create IPA
+          mkdir -p build/ios/ipa/Payload
+          cp -R "$APP_PATH" build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r Runner.ipa Payload
           rm -rf Payload
-          echo "IPA created at build/ios/ipa/Runner.ipa"
-          ls -lh ../../../../../ipa/
+          echo "IPA created successfully"
+          ls -lh Runner.ipa
 
       - name: List build output
         if: always()
