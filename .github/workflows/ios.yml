@@ -34,12 +34,37 @@ jobs:
           pod install --repo-update
 
       - name: Build iOS (unsigned .ipa)
-        run: flutter build ipa --no-codesign
+        run: flutter build ipa --no-codesign --verbose
+
+      - name: Create IPA from Runner.app
+        if: always()
+        run: |
+          echo "Creating IPA manually from Runner.app..."
+          mkdir -p build/ios/ipa
+          cd build/ios/archive/Runner.xcarchive/Products/Applications
+          mkdir -p Payload
+          cp -R Runner.app Payload/
+          zip -r ../../../../../ipa/Runner.ipa Payload
+          rm -rf Payload
+          echo "IPA created at build/ios/ipa/Runner.ipa"
+          ls -lh ../../../../../ipa/
 
       - name: List build output
         if: always()
         run: |
-          echo "Checking build directory structure:"
+          echo "=== Checking for IPA files ==="
+          find build -name "*.ipa" -ls || true
+          echo ""
+          echo "=== Checking for .app files ==="
+          find build -name "*.app" -type d -ls || true
+          echo ""
+          echo "=== IPA directory contents ==="
+          ls -la build/ios/ipa/ 2>/dev/null || echo "ipa directory does not exist"
+          echo ""
+          echo "=== Archive directory contents ==="
+          ls -la build/ios/archive/ 2>/dev/null || echo "archive directory does not exist"
+          echo ""
+          echo "=== Full build/ios tree ==="
           ls -R build/ios/ || true
 
       - name: Upload unsigned .ipa artifact
@@ -62,5 +87,7 @@ jobs:
         if: always()
         with:
           name: ios-runner-app
-          path: flutter_application_3/build/ios/iphoneos/Runner.app
-          if-no-files-found: warn
+          path: |
+            flutter_application_3/build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+            flutter_application_3/build/ios/iphoneos/Runner.app
+          if-no-files-found: ignore
