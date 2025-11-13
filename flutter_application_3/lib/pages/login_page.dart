@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_service.dart';
 import '../providers/user_provider.dart';
 import '../providers/app_settings_provider.dart';
+import '../utils/app_typography.dart';
 import 'signup_page.dart';
 import '../utils/page_transitions.dart';
 
@@ -81,14 +82,14 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Reset Password'),
+          title: Text('Reset Password', style: AppTypography.subsectionHeading(context)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Enter your email address to receive a password reset link:',
-                style: TextStyle(fontSize: 14),
+                style: AppTypography.bodyMedium(context),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -108,9 +109,9 @@ class _LoginPageState extends State<LoginPage> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue.shade200),
                 ),
-                child: const Text(
+                child: Text(
                   'You will receive an email with a link to reset your password. Check your spam folder if you don\'t see it.',
-                  style: TextStyle(fontSize: 12),
+                  style: AppTypography.caption(context),
                 ),
               ),
             ],
@@ -118,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text('Cancel', style: AppTypography.button(context)),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -154,7 +155,7 @@ class _LoginPageState extends State<LoginPage> {
                   }
                 }
               },
-              child: const Text('Send Reset Link'),
+              child: Text('Send Reset Link', style: AppTypography.button(context)),
             ),
           ],
         );
@@ -180,38 +181,15 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
-                // FBLA HIVE Text - Slightly thicker with subtle stroke
+                // FBLA HIVE Text - Outfit Black
                 Center(
-                  child: Stack(
-                    children: [
-                      // Very subtle stroke outline for slight extra thickness
-                      Text(
-                        'FBLA HIVE',
-                        style: TextStyle(
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 36,
-                          letterSpacing: 1.5,
-                          foreground: Paint()
-                            ..style = PaintingStyle.stroke
-                            ..strokeWidth = 0.5
-                            ..color = Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      // Fill
-                      const Text(
-                        'FBLA HIVE',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 36,
-                          letterSpacing: 1.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  child: Text(
+                    'FBLA HIVE',
+                    style: AppTypography.appTitle(context, color: Colors.black).copyWith(
+                      fontSize: 36,
+                      letterSpacing: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -257,17 +235,13 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 32),
                 Text(
                   'Welcome Back',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTypography.pageTitle(context),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to continue',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.hintColor,
-                  ),
+                  style: AppTypography.bodyLarge(context, color: theme.hintColor),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -325,7 +299,7 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: _resetPassword,
-                    child: const Text('Forgot Password?'),
+                    child: Text('Forgot Password?', style: AppTypography.button(context)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -347,9 +321,9 @@ class _LoginPageState extends State<LoginPage> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text(
+                          : Text(
                               'Sign In',
-                              style: TextStyle(fontSize: 16),
+                              style: AppTypography.button(context),
                             ),
                     );
                   },
@@ -360,7 +334,7 @@ class _LoginPageState extends State<LoginPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don't have an account? "),
+                    Text("Don't have an account? ", style: AppTypography.bodyMedium(context)),
                     TextButton(
                       onPressed: () {
                         Navigator.push(
@@ -368,7 +342,7 @@ class _LoginPageState extends State<LoginPage> {
                           FadePageRoute(page: const SignUpPage()),
                         );
                       },
-                      child: const Text('Sign Up'),
+                      child: Text('Sign Up', style: AppTypography.button(context)),
                     ),
                   ],
                 ),

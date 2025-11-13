@@ -40,6 +40,9 @@ Future<void> main() async {
   // Inject notification repository into post repository
   postRepo.setNotificationRepository(notificationRepo);
   
+  // Clear stale bot notifications (bot likes that don't exist in current session)
+  await notificationRepo.clearBotNotifications();
+  
   // Seed bot profiles to Firebase
   postRepo.seedBotProfiles();
 

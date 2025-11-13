@@ -148,6 +148,22 @@ class InMemoryNotificationRepository extends NotificationRepository {
     if (!_notificationsByUser.containsKey(userId)) {
       _notificationsByUser[userId] = [];
     }
+    
+    // Check for duplicate notifications (same actor, same post, same type within last 5 minutes)
+    final existingNotifications = _notificationsByUser[userId]!;
+    final recentDuplicate = existingNotifications.where((n) {
+      final isRecent = DateTime.now().difference(n.timestamp).inMinutes < 5;
+      final isSameType = n.type == notification.type;
+      final isSamePost = n.postId == notification.postId;
+      final isSameActor = n.actorName == notification.actorName;
+      return isRecent && isSameType && isSamePost && isSameActor;
+    }).isNotEmpty;
+    
+    if (recentDuplicate) {
+      print('DEBUG NotificationRepo: Skipping duplicate notification from ${notification.actorName}');
+      return;
+    }
+    
     _notificationsByUser[userId]!.insert(0, notification);
     
     // Keep only last 100 notifications per user
@@ -199,6 +215,26 @@ class InMemoryNotificationRepository extends NotificationRepository {
   @override
   Future<void> clearAllNotifications(String userId) async {
     _notificationsByUser[userId]?.clear();
+    await _persist();
+    notifyListeners();
+  }
+  
+  /// Clear notifications from bot accounts that may be stale from previous sessions
+  /// This prevents phantom notifications when bot likes are reset on app restart
+  Future<void> clearBotNotifications() async {
+    // Remove all notifications from bot actors across all users
+    _notificationsByUser.forEach((userId, notifications) {
+      notifications.removeWhere((notification) {
+        // Check if the notification is a like from a bot
+        return notification.type == NotificationType.like && 
+               (notification.actorHandle.contains('bot_') || 
+                notification.actorHandle.startsWith('@fbla_') ||
+                notification.actorHandle.startsWith('@sfhs_') ||
+                notification.actorHandle.startsWith('@austin_'));
+      });
+    });
+    
+    print('DEBUG: Cleared stale bot notifications');
     await _persist();
     notifyListeners();
   }

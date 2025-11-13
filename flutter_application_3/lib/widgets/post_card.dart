@@ -292,6 +292,21 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
               ),
             ],
             const SizedBox(height: 12),
+            // Cross-platform posting indicator
+            if (widget.post.crossPostedTo.isNotEmpty) ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Also posted on ${widget.post.crossPostedTo.join(' and ')}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             // Poll
             if (widget.post.poll != null) ...[
               PollWidget(poll: widget.post.poll!, postId: widget.post.id),

@@ -251,14 +251,30 @@ class HomeFeedPage extends StatelessWidget {
                                 }
                               }
                             }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('$value on post ${post.id}'),
-                                backgroundColor: Colors.grey[800],
-                                behavior: SnackBarBehavior.floating,
-                              ),
+                          } else if (value == 'Share') {
+                            // Show platform selection dialog
+                            final platform = await showDialog<String>(
+                              context: context,
+                              builder: (dialogContext) => const _SharePlatformDialog(),
                             );
+                            
+                            if (platform != null && context.mounted) {
+                              // Show success message based on selected platform
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, color: Colors.white),
+                                      const SizedBox(width: 12),
+                                      Text('Shared to $platform!'),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.green[700],
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
                           }
                         },
                       ),
@@ -269,6 +285,126 @@ class HomeFeedPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Share platform selection dialog
+class _SharePlatformDialog extends StatelessWidget {
+  const _SharePlatformDialog({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'Share Post',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildPlatformOption(
+            context: context,
+            icon: Icons.link,
+            label: 'Copy Link',
+            color: Colors.blue,
+            platform: 'Clipboard',
+          ),
+          const SizedBox(height: 8),
+          _buildPlatformOption(
+            context: context,
+            icon: Icons.facebook,
+            label: 'Facebook',
+            color: Color(0xFF1877F2),
+            platform: 'Facebook',
+          ),
+          const SizedBox(height: 8),
+          _buildPlatformOption(
+            context: context,
+            icon: Icons.send,
+            label: 'Twitter',
+            color: Color(0xFF1DA1F2),
+            platform: 'Twitter',
+          ),
+          const SizedBox(height: 8),
+          _buildPlatformOption(
+            context: context,
+            icon: Icons.camera_alt,
+            label: 'Instagram',
+            color: Color(0xFFE4405F),
+            platform: 'Instagram',
+          ),
+          const SizedBox(height: 8),
+          _buildPlatformOption(
+            context: context,
+            icon: Icons.work,
+            label: 'LinkedIn',
+            color: Color(0xFF0A66C2),
+            platform: 'LinkedIn',
+          ),
+          const SizedBox(height: 8),
+          _buildPlatformOption(
+            context: context,
+            icon: Icons.mail,
+            label: 'Email',
+            color: Colors.grey[700]!,
+            platform: 'Email',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlatformOption({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required String platform,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, platform),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[800],
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }
