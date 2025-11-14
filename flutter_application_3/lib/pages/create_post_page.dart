@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../repository/post_repository.dart';
 import '../providers/user_provider.dart';
 import '../providers/auth_service.dart';
+import '../widgets/confetti_animation.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -86,7 +87,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (!mounted) return;
                 if (_titleController.text.trim().isEmpty ||
                     _bodyController.text.trim().isEmpty) {
@@ -117,35 +118,43 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 );
 
                 if (mounted) {
-                  Navigator.of(context).pop(newPost);
+                  // Show confetti animation
+                  showConfettiOverlay(context, duration: const Duration(milliseconds: 1500));
                   
-                  // Show success with cross-platform info
-                  if (_selectedPlatforms.isNotEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.white),
-                                const SizedBox(width: 12),
-                                const Text('Post created successfully!'),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Sharing to: ${_selectedPlatforms.join(', ')}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
+                  // Delay navigation to show confetti
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  
+                  if (mounted) {
+                    Navigator.of(context).pop(newPost);
+                    
+                    // Show success with cross-platform info
+                    if (_selectedPlatforms.isNotEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  const SizedBox(width: 12),
+                                  const Text('Post created successfully!'),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Sharing to: ${_selectedPlatforms.join(', ')}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.green[700],
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 3),
                         ),
-                        backgroundColor: Colors.green[700],
-                        behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
+                      );
+                    }
                   }
                 }
               },

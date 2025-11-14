@@ -10,6 +10,7 @@ import '../providers/auth_service.dart';
 import '../providers/app_settings_provider.dart';
 import '../repository/post_repository.dart';
 import '../widgets/onboarding_tutorial.dart';
+import 'demo_features_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -770,6 +771,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer2<UserProvider, AuthService>(
       builder: (context, userProvider, authService, _) {
         return ListView(
@@ -870,10 +872,31 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Profile Information',
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.primaryContainer.withOpacity(0.3),
+                              theme.colorScheme.primaryContainer.withOpacity(0.1),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.person, color: theme.colorScheme.primary),
+                            const SizedBox(width: 12),
+                            const Text('Profile Information',
+                                style: TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
                       // Bio
                       TextField(
                         controller: _bioController,
@@ -955,10 +978,31 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Preferences',
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.secondaryContainer.withOpacity(0.3),
+                              theme.colorScheme.secondaryContainer.withOpacity(0.1),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.tune, color: theme.colorScheme.secondary),
+                            const SizedBox(width: 12),
+                            const Text('Preferences',
+                                style: TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
                       // Use a local SwitchTheme so inactive thumb color appears grey
                       Theme(
                         data: Theme.of(context).copyWith(
@@ -1159,10 +1203,31 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Theme',
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.tertiaryContainer.withOpacity(0.3),
+                              theme.colorScheme.tertiaryContainer.withOpacity(0.1),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.palette, color: theme.colorScheme.tertiary),
+                            const SizedBox(width: 12),
+                            const Text('Theme',
+                                style: TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
                       Consumer<ThemeProvider>(
                         builder: (context, themeProvider, child) {
                           return Theme(
@@ -1333,6 +1398,18 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           );
                         }
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.palette),
+                      title: const Text('View UI Features Demo'),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const DemoFeaturesPage()),
+                        );
                       },
                     ),
                     const Divider(),

@@ -93,6 +93,12 @@ class _ChapterPageState extends State<ChapterPage> {
         icon: Icons.article,
         description: 'Chapter announcements and discussions',
       ),
+      Channel(
+        id: 'chapter-stats',
+        name: 'chapter-stats',
+        icon: Icons.analytics,
+        description: 'Chapter statistics and achievements',
+      ),
     ];
     _selectedChannel = _channels[1]; // Start with general channel
   }
@@ -525,17 +531,35 @@ class _ChapterPageState extends State<ChapterPage> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
-                  color: theme.primaryColor,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.primary.withOpacity(0.8),
+                        theme.colorScheme.primaryContainer,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.school, color: theme.colorScheme.onPrimary),
-                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onPrimary.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.school, color: theme.colorScheme.onPrimary, size: 24),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'FBLA Chapter',
                           style: TextStyle(
                             color: theme.colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
                       ),
@@ -646,7 +670,7 @@ class _ChapterPageState extends State<ChapterPage> {
                     ],
                   ),
                 ),
-                // Content area - show calendar, posts, resources, or messages based on channel
+                // Content area - show calendar, posts, resources, stats, or messages based on channel
                 Expanded(
                   child: _selectedChannel.id == 'chapter-calendar'
                       ? _buildCalendarView(theme)
@@ -654,7 +678,9 @@ class _ChapterPageState extends State<ChapterPage> {
                         ? _buildPostsFeedView(theme)
                         : _selectedChannel.id == 'resources'
                           ? _buildResourcesView(theme)
-                          : _buildMessagesView(theme),
+                          : _selectedChannel.id == 'chapter-stats'
+                            ? _buildStatsView(theme)
+                            : _buildMessagesView(theme),
                 ),
                 // Message input
                 if (!_selectedChannel.isLocked &&
@@ -1750,6 +1776,293 @@ class _ChapterPageState extends State<ChapterPage> {
               ],
             );
           }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsView(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Chapter Statistics',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Overview of our chapter\'s achievements and activities',
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Stats cards grid
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 1.5,
+            children: [
+              _buildStatCard(
+                theme: theme,
+                title: 'Total Members',
+                value: '47',
+                icon: Icons.people,
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade400, Colors.blue.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                trend: '+5 this month',
+              ),
+              _buildStatCard(
+                theme: theme,
+                title: 'Events Hosted',
+                value: '12',
+                icon: Icons.event,
+                gradient: LinearGradient(
+                  colors: [Colors.purple.shade400, Colors.purple.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                trend: '3 upcoming',
+              ),
+              _buildStatCard(
+                theme: theme,
+                title: 'Achievements',
+                value: '28',
+                icon: Icons.emoji_events,
+                gradient: LinearGradient(
+                  colors: [Colors.amber.shade400, Colors.orange.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                trend: '8 this year',
+              ),
+              _buildStatCard(
+                theme: theme,
+                title: 'Active Projects',
+                value: '6',
+                icon: Icons.work,
+                gradient: LinearGradient(
+                  colors: [Colors.green.shade400, Colors.green.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                trend: '2 in progress',
+              ),
+              _buildStatCard(
+                theme: theme,
+                title: 'Competitions',
+                value: '15',
+                icon: Icons.stars,
+                gradient: LinearGradient(
+                  colors: [Colors.red.shade400, Colors.red.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                trend: '4 wins',
+              ),
+              _buildStatCard(
+                theme: theme,
+                title: 'Community Hours',
+                value: '324',
+                icon: Icons.volunteer_activism,
+                gradient: LinearGradient(
+                  colors: [Colors.pink.shade400, Colors.pink.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                trend: '+42 this month',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 40),
+          
+          // Recent achievements section
+          Text(
+            'Recent Achievements',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          _buildAchievementCard(
+            theme: theme,
+            title: '1st Place - State Leadership Conference',
+            date: 'October 2024',
+            icon: Icons.emoji_events,
+            color: Colors.amber,
+          ),
+          const SizedBox(height: 12),
+          _buildAchievementCard(
+            theme: theme,
+            title: 'Community Service Excellence Award',
+            date: 'September 2024',
+            icon: Icons.volunteer_activism,
+            color: Colors.blue,
+          ),
+          const SizedBox(height: 12),
+          _buildAchievementCard(
+            theme: theme,
+            title: 'Outstanding Chapter Award',
+            date: 'August 2024',
+            icon: Icons.stars,
+            color: Colors.purple,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required ThemeData theme,
+    required String title,
+    required String value,
+    required IconData icon,
+    required Gradient gradient,
+    String? trend,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: Colors.white.withOpacity(0.9), size: 32),
+              if (trend != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    trend,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.9),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementCard({
+    required ThemeData theme,
+    required String title,
+    required String date,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  date,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
         ],
       ),
     );

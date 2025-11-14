@@ -8,12 +8,12 @@ class AppTypography {
   
   // ============== APP BRANDING ==============
   
-  /// App name style (FBLA HIVE) - Outfit Black
+  /// App name style (FBLA HIVE) - Outfit Bold
   static TextStyle appTitle(BuildContext context, {Color? color}) {
     return GoogleFonts.outfit(
       fontSize: 20,
-      fontWeight: FontWeight.w900, // Black
-      letterSpacing: 0.6,
+      fontWeight: FontWeight.bold, // Bold (700)
+      letterSpacing: 0.2,
       color: color ?? Theme.of(context).appBarTheme.foregroundColor,
     );
   }

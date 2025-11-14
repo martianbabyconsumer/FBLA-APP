@@ -19,7 +19,7 @@ class _OnboardingTutorialState extends State<OnboardingTutorial> with SingleTick
   final List<TutorialStep> _steps = [
     TutorialStep(
       icon: Icons.waving_hand,
-      title: 'Welcome to FBLA Connect!',
+      title: 'Welcome to FBLA HIVE!',
       description: 'Connect with FBLA members, share achievements, and grow your professional network.',
       primaryColor: const Color(0xFF1976D2),
     ),
@@ -45,19 +45,19 @@ class _OnboardingTutorialState extends State<OnboardingTutorial> with SingleTick
       icon: Icons.person_rounded,
       title: 'Customize Your Profile',
       description: 'Add your bio, chapter, events, and profile picture to help others connect with you.',
-      primaryColor: const Color(0xFF90CAF9),
+      primaryColor: const Color(0xFF1565C0),
     ),
     TutorialStep(
       icon: Icons.notifications_rounded,
       title: 'Stay Updated',
       description: 'Get notifications when someone likes or comments on your posts. Customize in settings.',
-      primaryColor: const Color(0xFFBBDEFB),
+      primaryColor: const Color(0xFF1976D2),
     ),
     TutorialStep(
       icon: Icons.settings_rounded,
       title: 'Personalize Your Experience',
       description: 'Adjust theme colors, font size, and notification preferences to make the app yours.',
-      primaryColor: const Color(0xFFE3F2FD),
+      primaryColor: const Color(0xFF2196F3),
     ),
   ];
 
@@ -84,11 +84,10 @@ class _OnboardingTutorialState extends State<OnboardingTutorial> with SingleTick
   void _nextStep() {
     if (_currentStep < _steps.length - 1) {
       setState(() {
-        _animationController.reverse().then((_) {
-          _currentStep++;
-          _animationController.forward();
-        });
+        _currentStep++;
       });
+      _animationController.reset();
+      _animationController.forward();
     } else {
       _completeTutorial();
     }
@@ -97,11 +96,10 @@ class _OnboardingTutorialState extends State<OnboardingTutorial> with SingleTick
   void _previousStep() {
     if (_currentStep > 0) {
       setState(() {
-        _animationController.reverse().then((_) {
-          _currentStep--;
-          _animationController.forward();
-        });
+        _currentStep--;
       });
+      _animationController.reset();
+      _animationController.forward();
     }
   }
 
