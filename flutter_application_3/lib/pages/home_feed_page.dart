@@ -8,6 +8,7 @@ import '../widgets/post_card.dart';
 import '../pages/create_post_page.dart';
 import '../pages/post_detail_page.dart';
 import '../utils/page_transitions.dart';
+import '../utils/micro_interactions.dart';
 
 class HomeFeedPage extends StatelessWidget {
   const HomeFeedPage({super.key});
@@ -285,6 +286,33 @@ class HomeFeedPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary,
+              theme.colorScheme.secondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.primary.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () => _createNewPost(context),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          icon: const Icon(Icons.add, size: 24),
+          label: const Text('Create Post', style: TextStyle(fontWeight: FontWeight.w600)),
+        ),
       ),
     );
   }

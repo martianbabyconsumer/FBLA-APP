@@ -12,24 +12,75 @@ class CalendarProvider extends ChangeNotifier {
   void _initializeSampleEvents() {
     final now = DateTime.now();
 
-    // Chapter events
-    _chapterEvents[DateTime(now.year, now.month, now.day + 2)] = [
+    // Chapter events - FBLA themed
+    _chapterEvents[DateTime(2025, 11, 12)] = [
       Event(
-        title: 'Chapter Meeting',
-        description: 'Monthly FBLA chapter meeting in Room 201',
-        startTime: const TimeOfDay(hour: 15, minute: 30),
-        endTime: const TimeOfDay(hour: 16, minute: 30),
-        color: Colors.blue,
+        title: 'Area at JVHS',
+        description: 'Area Competition at Junction View High School - All competitive events',
+        startTime: const TimeOfDay(hour: 8, minute: 0),
+        endTime: const TimeOfDay(hour: 15, minute: 0),
+        color: Colors.red,
       ),
     ];
 
+    // Add FBLA Meetings every other Wednesday
+    // Find the next Wednesday
+    DateTime currentDate = DateTime(now.year, now.month, now.day);
+    int daysUntilWednesday = (DateTime.wednesday - currentDate.weekday) % 7;
+    if (daysUntilWednesday == 0) daysUntilWednesday = 7; // If today is Wednesday, get next Wednesday
+    DateTime nextWednesday = currentDate.add(Duration(days: daysUntilWednesday));
+    
+    // Add 6 FBLA Meetings, every other Wednesday (14 days apart)
+    for (int i = 0; i < 6; i++) {
+      DateTime meetingDate = nextWednesday.add(Duration(days: i * 14));
+      _chapterEvents[meetingDate] = [
+        Event(
+          title: 'FBLA Meeting',
+          description: 'Bi-weekly FBLA chapter meeting in Room 201',
+          startTime: const TimeOfDay(hour: 15, minute: 30),
+          endTime: const TimeOfDay(hour: 16, minute: 30),
+          color: Colors.blue,
+        ),
+      ];
+    }
+
     _chapterEvents[DateTime(now.year, now.month, now.day + 5)] = [
       Event(
-        title: 'Leadership Conference',
-        description: 'State Leadership Conference preparation meeting',
+        title: 'Leadership Workshop',
+        description: 'District Leadership Conference preparation',
         startTime: const TimeOfDay(hour: 14, minute: 0),
         endTime: const TimeOfDay(hour: 16, minute: 0),
         color: Colors.green,
+      ),
+    ];
+
+    _chapterEvents[DateTime(now.year, now.month, now.day + 7)] = [
+      Event(
+        title: 'Fundraiser Planning',
+        description: 'Planning committee for annual FBLA fundraiser',
+        startTime: const TimeOfDay(hour: 15, minute: 0),
+        endTime: const TimeOfDay(hour: 16, minute: 30),
+        color: Colors.orange,
+      ),
+    ];
+
+    _chapterEvents[DateTime(now.year, now.month, now.day + 10)] = [
+      Event(
+        title: 'Business Tour',
+        description: 'Local business tour and networking event',
+        startTime: const TimeOfDay(hour: 13, minute: 0),
+        endTime: const TimeOfDay(hour: 16, minute: 0),
+        color: Colors.purple,
+      ),
+    ];
+
+    _chapterEvents[DateTime(now.year, now.month + 1, 5)] = [
+      Event(
+        title: 'State Leadership Conference',
+        description: 'Annual SLC - Sacramento Convention Center',
+        startTime: const TimeOfDay(hour: 7, minute: 0),
+        endTime: const TimeOfDay(hour: 18, minute: 0),
+        color: Colors.red,
       ),
     ];
 
@@ -37,10 +88,20 @@ class CalendarProvider extends ChangeNotifier {
     _personalEvents[DateTime(now.year, now.month, now.day + 1)] = [
       Event(
         title: 'Practice Presentation',
-        description: 'Practice for upcoming competition',
+        description: 'Practice for Business Plan presentation',
         startTime: const TimeOfDay(hour: 16, minute: 0),
         endTime: const TimeOfDay(hour: 17, minute: 0),
         color: Colors.orange,
+      ),
+    ];
+
+    _personalEvents[DateTime(now.year, now.month, now.day + 3)] = [
+      Event(
+        title: 'Study Session',
+        description: 'Competitive event exam preparation',
+        startTime: const TimeOfDay(hour: 14, minute: 30),
+        endTime: const TimeOfDay(hour: 16, minute: 0),
+        color: Colors.teal,
       ),
     ];
   }

@@ -82,17 +82,31 @@ class _AppScaffoldState extends State<AppScaffold> {
       appBar: AppBar(
         backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.primary.withOpacity(0.85),
+                theme.colorScheme.primaryContainer.withOpacity(0.3),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         centerTitle: true,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Logo without glow
             ColorFiltered(
               colorFilter: const ColorFilter.matrix([
-                1.2, 0, 0, 0, 0, // Red channel (increase contrast)
-                0, 1.2, 0, 0, 0, // Green channel
-                0, 0, 1.2, 0, 0, // Blue channel
-                0, 0, 0, 1, 0,   // Alpha channel
+                1.2, 0, 0, 0, 0,
+                0, 1.2, 0, 0, 0,
+                0, 0, 1.2, 0, 0,
+                0, 0, 0, 1, 0,
               ]),
               child: Image.asset(
                 'assets/images/bee_logo_white.png',

@@ -307,6 +307,7 @@ class _CalendarPageState extends State<CalendarPage>
       },
     );
   }
+
 }
 
 class _CalendarView extends StatelessWidget {

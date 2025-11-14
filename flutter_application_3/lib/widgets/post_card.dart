@@ -72,18 +72,27 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        gradient: LinearGradient(
+          colors: [
+            theme.cardColor,
+            theme.brightness == Brightness.dark
+                ? theme.cardColor.withOpacity(0.95)
+                : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: theme.brightness == Brightness.light
-              ? theme.colorScheme.primary
+              ? theme.colorScheme.primary.withOpacity(0.2)
               : theme.dividerColor,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withAlpha((0.06 * 255).round()),
-            blurRadius: 8,
+            color: theme.shadowColor.withAlpha((0.08 * 255).round()),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
