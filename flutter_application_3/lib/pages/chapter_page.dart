@@ -685,7 +685,9 @@ class _ChapterPageState extends State<ChapterPage> {
                 // Message input
                 if (!_selectedChannel.isLocked &&
                     _selectedChannel.id != 'chapter-calendar' &&
-                    _selectedChannel.id != 'resources')
+                    _selectedChannel.id != 'resources' &&
+                    _selectedChannel.id != 'chapter-stats' &&
+                    _selectedChannel.id != 'chapter-posts')
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -1022,14 +1024,25 @@ class _ChapterPageState extends State<ChapterPage> {
   Widget _buildPostsFeedView(ThemeData theme) {
     return Consumer3<PostRepository, AppSettingsProvider, AuthService>(
       builder: (context, repo, settings, authService, _) {
-        // Get chapter-related posts (posts with chapter-related tags)
+        // Get chapter-related posts from Jersey Village HS only
         final chapterTags = ['Chapter News', 'Chapter Events', 'Meetings', 'Fundraising'];
         final chapterPosts = repo.getPosts().where((post) {
-          return post.tags.any((tag) => 
+          // Check if post has chapter-related tags
+          final hasChapterTag = post.tags.any((tag) => 
             chapterTags.any((chapterTag) => 
               tag.toLowerCase().contains(chapterTag.toLowerCase())
             )
           );
+          
+          // Only show posts from Jersey Village HS chapter
+          if (hasChapterTag && post.userId != null) {
+            final profile = InMemoryPostRepository.getBotProfile(post.userId!);
+            if (profile != null) {
+              return profile['chapter'] == 'Jersey Village HS';
+            }
+          }
+          
+          return hasChapterTag && post.userId == null; // Allow posts without userId (user posts)
         }).toList();
 
         if (chapterPosts.isEmpty) {

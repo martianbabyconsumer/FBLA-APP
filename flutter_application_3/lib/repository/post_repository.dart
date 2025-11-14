@@ -259,6 +259,61 @@ class InMemoryPostRepository extends PostRepository {
     _botHandleCache[seed] = handle;
     return handle;
   }
+  
+  // Generate a random bot profile with bio, event, chapter, grade
+  Map<String, String> _generateRandomBotProfile(String displayName, String username) {
+    final random = math.Random();
+    
+    final bios = [
+      'FBLA member passionate about business and leadership 💼',
+      'Future entrepreneur | Love competitions and networking 🚀',
+      'Business enthusiast | Making connections and building skills 📈',
+      'FBLA competitor | Focused on finance and accounting 💰',
+      'Marketing lover | Creative problem solver | Team player ✨',
+      'Economics nerd | Love data and analytics 📊',
+      'Future business leader | Community service advocate 🌟',
+      'Event planning enthusiast | Making memories with FBLA 🎉',
+      'Aspiring CEO | Learning and growing every day 💡',
+      'Business presentation champion | Public speaking lover 🎤',
+    ];
+    
+    final events = [
+      'Business Presentation',
+      'Marketing',
+      'Accounting',
+      'Economics',
+      'Business Plan',
+      'Finance',
+      'Management Decision Making',
+      'Entrepreneurship',
+      'Business Law',
+      'Introduction to Business',
+      'Business Communication',
+      'Computer Applications',
+    ];
+    
+    final chapters = [
+      'Jersey Village HS',
+      'San Francisco HS',
+      'Austin West HS',
+      'Manhattan High',
+      'Chicago North FBLA',
+      'Miami Lakes FBLA',
+      'Seattle Tech HS',
+      'Boston Central HS',
+    ];
+    
+    final grades = ['9', '10', '11', '12'];
+    
+    return {
+      'displayName': displayName,
+      'username': username,
+      'bio': bios[random.nextInt(bios.length)],
+      'event': events[random.nextInt(events.length)],
+      'chapter': chapters[random.nextInt(chapters.length)],
+      'grade': grades[random.nextInt(grades.length)],
+    };
+  }
 
   InMemoryPostRepository()
       : _posts = [
@@ -372,6 +427,7 @@ class InMemoryPostRepository extends PostRepository {
             id: 'ny_1',
             handle: '@nychs_fbla',
             displayName: 'NYC Central HS FBLA',
+            userId: 'bot_nychs_fbla',
             dateLabel: 'Oct 29',
             title: 'Finance Competition Tips Thread',
             body:
@@ -385,6 +441,7 @@ class InMemoryPostRepository extends PostRepository {
             id: '4',
             handle: '@competition_team',
             displayName: 'Ryan Thompson',
+            userId: 'bot_ryan_thompson',
             dateLabel: 'Oct 25',
             title: 'Business Ethics Competition Prep',
             body:
@@ -399,6 +456,7 @@ class InMemoryPostRepository extends PostRepository {
             id: 'fl_1',
             handle: '@miami_fbla',
             displayName: 'Miami Lakes FBLA',
+            userId: 'bot_miami_fbla',
             dateLabel: 'Oct 27',
             title: 'Thank You To Our Sponsors! 💙',
             body:
@@ -413,6 +471,7 @@ class InMemoryPostRepository extends PostRepository {
             id: 'il_1',
             handle: '@chicago_fbla',
             displayName: 'Chicago North FBLA',
+            userId: 'bot_chicago_fbla',
             dateLabel: 'Oct 26',
             title: 'Networking Event Success! 🤝',
             body:
@@ -856,13 +915,19 @@ class InMemoryPostRepository extends PostRepository {
         final botSeed = random.nextInt(100000);
         final botName = _generateBotName(botSeed);
         final botHandle = _generateBotHandle(botSeed);
+        final botUserId = 'bot_commenter_$botSeed';
+        
+        // Generate random profile for this bot commenter if not exists
+        if (!_botProfiles.containsKey(botUserId)) {
+          _botProfiles[botUserId] = _generateRandomBotProfile(botName, botHandle.substring(1));
+        }
         
         final comment = Comment(
           authorHandle: botHandle,
           authorName: botName,
           text: genericComments[commentIndex],
           dateLabel: 'Just now',
-          userId: 'bot_user_$botSeed',
+          userId: botUserId,
         );
         
         // Find the post in the list and add the comment
@@ -1003,13 +1068,19 @@ class InMemoryPostRepository extends PostRepository {
     final commentBotSeed = random.nextInt(100000);
     final commentBotName = _generateBotName(commentBotSeed);
     final commentBotHandle = _generateBotHandle(commentBotSeed);
+    final commentBotUserId = 'bot_commenter_$commentBotSeed';
+    
+    // Generate random profile for this bot commenter if not exists
+    if (!_botProfiles.containsKey(commentBotUserId)) {
+      _botProfiles[commentBotUserId] = _generateRandomBotProfile(commentBotName, commentBotHandle.substring(1));
+    }
     
     final comment = Comment(
       authorHandle: commentBotHandle,
       authorName: commentBotName,
       text: genericComments[commentIndex],
       dateLabel: 'Just now',
-      userId: 'bot_user_$commentBotSeed',
+      userId: commentBotUserId,
     );
     
     // Add comment to the post in the list
@@ -1197,12 +1268,48 @@ class InMemoryPostRepository extends PostRepository {
         'chapter': 'Manhattan High',
         'grade': '12',
       },
+      'bot_nychs_fbla': {
+        'displayName': 'NYC Central HS FBLA',
+        'username': 'nychs_fbla',
+        'bio': 'Official NYC Central FBLA | Finance competition specialists | Big Apple business leaders 🗽',
+        'event': 'Finance',
+        'chapter': 'NYC Central HS',
+        'grade': 'Grad',
+      },
       'bot_nyc_fbla_ig': {
         'displayName': 'NYC FBLA Chapter 📸',
         'username': 'newyork_fbla_ig',
         'bio': 'Official NYC FBLA Instagram | State Champions | #fbla25-26 | Posting from the Big Apple 🗽',
         'event': 'Business Plan',
         'chapter': 'New York FBLA',
+        'grade': 'Grad',
+      },
+      'bot_ryan_thompson': {
+        'displayName': 'Ryan Thompson',
+        'username': 'competition_team',
+        'bio': 'Competition team lead | Business Ethics specialist | Preparing future ethical business leaders 💼',
+        'event': 'Business Ethics',
+        'chapter': 'Jersey Village HS',
+        'grade': '11',
+      },
+      
+      // Florida chapter bots
+      'bot_miami_fbla': {
+        'displayName': 'Miami Lakes FBLA',
+        'username': 'miami_fbla',
+        'bio': 'Official Miami Lakes FBLA | Thanks to our amazing sponsors | South Florida pride 🌴',
+        'event': 'Chapter Activities',
+        'chapter': 'Miami Lakes HS',
+        'grade': 'Grad',
+      },
+      
+      // Illinois chapter bots
+      'bot_chicago_fbla': {
+        'displayName': 'Chicago North FBLA',
+        'username': 'chicago_fbla',
+        'bio': 'Official Chicago North FBLA | Networking experts | Connecting students with professionals 🤝',
+        'event': 'Networking',
+        'chapter': 'Chicago North HS',
         'grade': 'Grad',
       },
       

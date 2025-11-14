@@ -252,7 +252,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign Up', style: AppTypography.pageTitle(context)),
+        title: Text(
+          'Sign Up', 
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.normal,
+            color: theme.colorScheme.onPrimary,
+          ),
+        ),
       ),
       body: Center(
         child: SingleChildScrollView(
