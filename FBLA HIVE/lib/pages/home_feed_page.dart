@@ -8,7 +8,6 @@ import '../widgets/post_card.dart';
 import '../pages/create_post_page.dart';
 import '../pages/post_detail_page.dart';
 import '../utils/page_transitions.dart';
-import '../utils/micro_interactions.dart';
 
 class HomeFeedPage extends StatelessWidget {
   const HomeFeedPage({super.key});
@@ -75,7 +74,16 @@ class HomeFeedPage extends StatelessWidget {
           Expanded(
             child: Consumer<PostRepository>(
               builder: (context, repo, _) {
-                final posts = repo.getPosts();
+                final allPosts = repo.getPosts();
+                // Sort posts: crossplatform posts first, then regular posts
+                final posts = [...allPosts];
+                posts.sort((a, b) {
+                  final aCrossPost = a.crossPostedTo.isNotEmpty;
+                  final bCrossPost = b.crossPostedTo.isNotEmpty;
+                  if (aCrossPost && !bCrossPost) return -1;
+                  if (!aCrossPost && bCrossPost) return 1;
+                  return 0; // Keep original order within each category
+                });
                 return ListView.builder(
                   padding: const EdgeInsets.only(bottom: 80, top: 8),
                   itemCount: posts.length,
@@ -287,33 +295,39 @@ class HomeFeedPage extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              theme.colorScheme.primary,
-              theme.colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.primary.withOpacity(0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+      floatingActionButton: theme.brightness == Brightness.dark
+          ? FloatingActionButton.extended(
+              onPressed: () => _createNewPost(context),
+              icon: const Icon(Icons.add, size: 24),
+              label: const Text('Create Post', style: TextStyle(fontWeight: FontWeight.w600)),
+            )
+          : Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.secondary,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withOpacity(0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: FloatingActionButton.extended(
+                onPressed: () => _createNewPost(context),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                icon: const Icon(Icons.add, size: 24),
+                label: const Text('Create Post', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
             ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () => _createNewPost(context),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: const Icon(Icons.add, size: 24),
-          label: const Text('Create Post', style: TextStyle(fontWeight: FontWeight.w600)),
-        ),
-      ),
     );
   }
 }

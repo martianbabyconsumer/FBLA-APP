@@ -227,12 +227,21 @@ class _AppScaffoldState extends State<AppScaffold> {
           final isMovingRight = _selectedIndex > _previousIndex;
           final offsetBegin = isMovingRight ? const Offset(1.0, 0.0) : const Offset(-1.0, 0.0);
           
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: offsetBegin,
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
+          // Add subtle fade and scale effect
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: offsetBegin,
+                end: Offset.zero,
+              ).animate(animation),
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                ),
+                child: child,
+              ),
+            ),
           );
         },
         child: KeyedSubtree(

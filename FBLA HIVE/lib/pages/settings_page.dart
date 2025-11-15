@@ -879,8 +879,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              theme.colorScheme.primaryContainer.withOpacity(0.3),
-                              theme.colorScheme.primaryContainer.withOpacity(0.1),
+                              theme.colorScheme.primary.withOpacity(theme.brightness == Brightness.dark ? 0.15 : 0.2),
+                              theme.colorScheme.primary.withOpacity(theme.brightness == Brightness.dark ? 0.05 : 0.1),
                             ],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
@@ -985,8 +985,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              theme.colorScheme.secondaryContainer.withOpacity(0.3),
-                              theme.colorScheme.secondaryContainer.withOpacity(0.1),
+                              theme.colorScheme.primary.withOpacity(theme.brightness == Brightness.dark ? 0.15 : 0.2),
+                              theme.colorScheme.primary.withOpacity(theme.brightness == Brightness.dark ? 0.05 : 0.1),
                             ],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
@@ -995,7 +995,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.tune, color: theme.colorScheme.secondary),
+                            Icon(Icons.tune, color: theme.colorScheme.primary),
                             const SizedBox(width: 12),
                             const Text('Preferences',
                                 style: TextStyle(
@@ -1210,8 +1210,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              theme.colorScheme.tertiaryContainer.withOpacity(0.3),
-                              theme.colorScheme.tertiaryContainer.withOpacity(0.1),
+                              theme.colorScheme.primary.withOpacity(theme.brightness == Brightness.dark ? 0.15 : 0.2),
+                              theme.colorScheme.primary.withOpacity(theme.brightness == Brightness.dark ? 0.05 : 0.1),
                             ],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
@@ -1220,7 +1220,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.palette, color: theme.colorScheme.tertiary),
+                            Icon(Icons.palette, color: theme.colorScheme.primary),
                             const SizedBox(width: 12),
                             const Text('Theme',
                                 style: TextStyle(
@@ -1388,13 +1388,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: const Text('Show Tutorial Again'),
                       trailing: const Icon(Icons.arrow_forward_ios),
                       onTap: () async {
-                        // Reset onboarding and show it
+                        // Reset onboarding and show it immediately
                         await OnboardingHelper.resetOnboarding();
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Tutorial will show on next app launch'),
-                              duration: Duration(seconds: 2),
+                          await showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => OnboardingTutorial(
+                              onComplete: () {
+                                Navigator.of(context).pop();
+                              },
                             ),
                           );
                         }

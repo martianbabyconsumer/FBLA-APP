@@ -28,6 +28,7 @@ class PostCard extends StatefulWidget {
 class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin {
   late AnimationController _likeAnimationController;
   late Animation<double> _likeScale;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -70,33 +71,41 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
     print('DEBUG PostCard: profileImagePath = ${widget.post.profileImagePath}');
     print('DEBUG PostCard: userId = ${widget.post.userId}');
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.cardColor,
-            theme.brightness == Brightness.dark
-                ? theme.cardColor.withOpacity(0.95)
-                : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.brightness == Brightness.light
-              ? theme.colorScheme.primary.withOpacity(0.2)
-              : theme.dividerColor,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withAlpha((0.08 * 255).round()),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        transform: Matrix4.identity()..scale(_isHovered ? 1.01 : 1.0),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.cardColor,
+              theme.brightness == Brightness.dark
+                  ? theme.cardColor.withOpacity(0.95)
+                  : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _isHovered 
+                ? theme.colorScheme.primary.withOpacity(0.4)
+                : theme.brightness == Brightness.light
+                    ? theme.colorScheme.primary.withOpacity(0.2)
+                    : theme.dividerColor,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withAlpha((0.08 * 255).round()),
+              blurRadius: _isHovered ? 16 : 12,
+              offset: Offset(0, _isHovered ? 6 : 4),
+            ),
+          ],
+        ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -434,6 +443,7 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
             ),
           ],
         ),
+      ),
       ),
     );
   }
