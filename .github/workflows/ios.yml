@@ -13,7 +13,7 @@ jobs:
     runs-on: macos-latest
     defaults:
       run:
-        working-directory: flutter_application_3
+        working-directory: "FBLA HIVE"
 
     steps:
       - name: Checkout
@@ -82,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-unsigned-ipa
-          path: flutter_application_3/build/ios/ipa/*.ipa
+          path: "FBLA HIVE/build/ios/ipa/*.ipa"
           if-no-files-found: warn
 
       - name: Upload xcarchive artifact
@@ -90,7 +90,7 @@ jobs:
         if: always()
         with:
           name: ios-xcarchive
-          path: flutter_application_3/build/ios/archive/*.xcarchive
+          path: "FBLA HIVE/build/ios/archive/*.xcarchive"
           if-no-files-found: warn
           
       - name: Upload Runner.app as fallback
@@ -99,6 +99,6 @@ jobs:
         with:
           name: ios-runner-app
           path: |
-            flutter_application_3/build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
-            flutter_application_3/build/ios/iphoneos/Runner.app
+            FBLA HIVE/build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+            FBLA HIVE/build/ios/iphoneos/Runner.app
           if-no-files-found: ignore
