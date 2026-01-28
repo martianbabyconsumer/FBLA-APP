@@ -28,11 +28,18 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Pre-install CocoaPods dependencies
+      - name: Clean iOS build
+        run: flutter clean
+
+      - name: Pre-install CocoaPods dependencies with retry
         run: |
           cd ios
-          pod install
-        timeout-minutes: 10
+          # Update CocoaPods repo
+          pod repo update --verbose
+          # Install with verbose output
+          pod install --verbose --repo-update
+        timeout-minutes: 15
+        continue-on-error: false
 
       - name: Build iOS app
         run: flutter build ios --release --no-codesign --no-pub --verbose
