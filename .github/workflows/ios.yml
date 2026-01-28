@@ -28,10 +28,14 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Pre-install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install
+        timeout-minutes: 10
+
       - name: Build iOS app
         run: flutter build ios --release --no-codesign --no-pub --verbose
-        env:
-          SKIP_POD_INSTALL: 1
         timeout-minutes: 30
 
       - name: Create IPA from Runner.app
