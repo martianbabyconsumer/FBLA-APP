@@ -29,7 +29,9 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS app
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --no-pub
+        env:
+          SKIP_POD_INSTALL: 1
 
       - name: Create IPA from Runner.app
         run: |
