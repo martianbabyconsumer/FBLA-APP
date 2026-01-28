@@ -28,24 +28,22 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Install CocoaPods dependencies
-        run: |
-          cd ios
-          pod install --repo-update
-
-      - name: Build iOS (unsigned .ipa)
-        run: flutter build ipa --no-codesign --verbose
+      - name: Build iOS app
+        run: flutter build ios --release --no-codesign
 
       - name: Create IPA from Runner.app
         run: |
           echo "Creating IPA manually from Runner.app..."
           
-          # Check if xcarchive exists
-          if [ -d "build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app" ]; then
-            echo "Found Runner.app in xcarchive"
-            APP_PATH="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          # Find the Runner.app
+          if [ -d "build/ios/iphoneos/Runner.app" ]; then
+            echo "Found Runner.app in iphoneos"
+            APP_PATH="build/ios/iphoneos/Runner.app"
+          elif [ -d "build/ios/Release-iphoneos/Runner.app" ]; then
+            echo "Found Runner.app in Release-iphoneos"
+            APP_PATH="build/ios/Release-iphoneos/Runner.app"
           else
-            echo "Error: Runner.app not found in expected location"
+            echo "Error: Runner.app not found"
             echo "Looking for .app files:"
             find build/ios -name "*.app" -type d || true
             exit 1
